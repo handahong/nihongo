@@ -200,7 +200,7 @@
     <div class="box">
       <h3>테스트 도구</h3>
       <p id="offsetLabel"></p>
-      <div class="mini">
+      <div class="mini" id="skipTools">
         <button data-skip="1">+1일</button>
         <button data-skip="7">+7일</button>
         <button data-skip="0">원래대로</button>
@@ -432,7 +432,7 @@ function renderPanel(){
   $('stats').innerHTML=rows.map(([k,v])=>`<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
   $('offsetLabel').innerHTML=`며칠 뒤 카드가 어떻게 돌아오는지 기다리지 않고 보려면 시간을 밀어봐.<br>현재 ${S.offset===0?'실제 시각':'+'+Math.round(S.offset/DAY)+'일'} · ${dayKey(now())}`;
 }
-document.querySelector('#viewPanel .box:last-of-type .mini').onclick=e=>{
+$('skipTools').onclick=e=>{
   const b=e.target.closest('[data-skip]'); if(!b) return;
   const d=+b.dataset.skip; S.offset = d===0?0:S.offset+d*DAY; persist(); renderPanel(); render();
 };
