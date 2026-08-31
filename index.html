@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>語 · 일본어</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="語">
+<meta name="theme-color" content="#FBFAF7">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root{
+    --paper:#FBFAF7; --wash:#F1EEE6; --rule:#7E9F8B;
+    --rule-faint:rgba(126,159,139,.35); --ink:#1B2A33; --ink-soft:#4A5C66;
+    --muted:#7A868C; --seal:#B33A2B; --line:rgba(27,42,51,.12);
+    --jp:'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP','Nanum Myeongjo',serif;
+    --ui:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,-apple-system,sans-serif;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--paper);font-family:var(--ui);color:var(--ink);
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overscroll-behavior:none;-webkit-user-select:none;user-select:none;
+  }
+  button{font-family:var(--ui);cursor:pointer}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .hide{display:none!important}
+
+  header{display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;border-bottom:1px solid var(--line);flex:none}
+  .brand{font-family:var(--jp);font-size:17px;letter-spacing:.08em}
+  .due{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.1em;margin-left:10px}
+  .tabs{display:flex;gap:6px;align-items:center}
+  .tab{font-size:11.5px;padding:5px 10px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-soft);border-radius:2px}
+  .tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  main{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+  .queue{padding:14px 16px 4px;flex:none}
+  .cells{display:flex;gap:2px}
+  .cells i{flex:1;height:6px;border:1px solid var(--rule-faint)}
+  .cells i.on{background:var(--rule)}
+  .legend{display:flex;gap:12px;margin-top:8px;font-family:var(--mono);
+    font-size:10.5px;color:var(--muted);letter-spacing:.05em}
+  .legend .lrn{color:var(--seal)}
+
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:8px 20px 20px;gap:22px}
+  .genko{width:208px;height:208px;border:1.5px solid var(--rule);position:relative;
+    display:flex;align-items:center;justify-content:center;background:var(--paper);flex:none}
+  .genko:before,.genko:after{content:'';position:absolute;background-repeat:repeat}
+  .genko:before{left:50%;top:0;bottom:0;width:1px;
+    background:repeating-linear-gradient(to bottom,var(--rule-faint) 0 4px,transparent 4px 9px)}
+  .genko:after{top:50%;left:0;right:0;height:1px;
+    background:repeating-linear-gradient(to right,var(--rule-faint) 0 4px,transparent 4px 9px)}
+  #word{font-family:var(--jp);color:var(--ink);letter-spacing:.04em;
+    position:relative;padding:0 8px;text-align:center;line-height:1.15}
+  .meta{position:absolute;top:-1px;left:-1px;font-family:var(--mono);font-size:9px;
+    color:var(--rule);background:var(--paper);padding:2px 5px;letter-spacing:.08em}
+
+  .back{width:100%;min-height:150px;text-align:center}
+  #reveal{width:100%;padding:14px 0;background:transparent;border:1px dashed var(--rule-faint);
+    color:var(--muted);font-size:13px;border-radius:2px}
+  .reading{font-family:var(--jp);font-size:19px;color:var(--rule);letter-spacing:.1em}
+  .meaning{font-size:16.5px;margin-top:8px;font-weight:500}
+  .ex{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+    font-family:var(--jp);font-size:15px;color:var(--ink-soft);line-height:1.7}
+  .exko{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .speak{margin-top:14px;padding:6px 14px;font-size:11.5px;background:transparent;
+    border:1px solid var(--line);color:var(--ink-soft);border-radius:2px;font-family:var(--mono)}
+
+  .rate{display:flex;border-top:1px solid var(--line);flex:none}
+  .rate button{flex:1;padding:13px 2px 11px;background:transparent;border:none;
+    border-right:1px solid var(--line)}
+  .rate button:last-child{border-right:none}
+  .rate b{display:block;font-size:13px;font-weight:500}
+  .rate b.again{color:var(--seal)}
+  .rate s{display:block;text-decoration:none;font-family:var(--mono);
+    font-size:10.5px;color:var(--muted);margin-top:3px}
+
+  .pane{padding:20px 18px;flex:1;display:flex;flex-direction:column}
+  .pane h2{font-size:13.5px;font-weight:500;margin:0 0 4px}
+  .pane p.sub{font-size:11.5px;color:var(--muted);margin:0 0 16px}
+  label{display:block;margin-bottom:11px}
+  label span{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.12em}
+  label input{width:100%;margin-top:4px;padding:7px 0;border:none;
+    border-bottom:1px solid var(--line);background:transparent;font-size:14px;
+    color:var(--ink);outline:none;-webkit-user-select:text;user-select:text;font-family:var(--ui)}
+  label input.jp{font-family:var(--jp);font-size:16px}
+  .chips{display:flex;gap:6px;margin:6px 0 18px}
+  .chips button{flex:1;padding:7px 0;font-size:11.5px;border:1px solid var(--line);
+    background:transparent;color:var(--muted);border-radius:2px}
+  .chips button.on{border-color:var(--rule);background:var(--wash);color:var(--ink)}
+  .row{display:flex;justify-content:space-between;padding:9px 0;
+    border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
+  .row b{font-family:var(--mono);font-weight:400;color:var(--ink)}
+  .foot{margin-top:auto;display:flex;gap:8px;padding-top:20px}
+  .ghost{flex:1;padding:11px 0;border:1px solid var(--line);background:transparent;
+    color:var(--ink-soft);font-size:13px;border-radius:2px}
+  .solid{flex:2;padding:11px 0;border:none;background:var(--ink);color:var(--paper);
+    font-size:13px;border-radius:2px}
+  .solid:disabled{background:var(--line);color:var(--muted)}
+  .box{margin-top:22px;padding:13px;border:1px dashed var(--rule-faint);border-radius:2px}
+  .box h3{font-family:var(--mono);font-size:9.5px;color:var(--rule);
+    letter-spacing:.12em;margin:0 0 6px;font-weight:400}
+  .box p{font-size:11.5px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+  .mini{display:flex;gap:6px}
+  .mini button{flex:1;padding:6px 0;font-size:11px;font-family:var(--mono);
+    border:1px solid var(--line);background:transparent;color:var(--ink-soft);border-radius:2px}
+
+  .done{flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:28px;text-align:center;gap:0}
+  .done .mark{font-family:var(--jp);font-size:40px;color:var(--rule);letter-spacing:.15em}
+  .fade{animation:in .18s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.fade{animation:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div><span class="brand">日本語</span><span class="due" id="dueCount">0 DUE</span></div>
+  <div class="tabs">
+    <button class="tab" id="tabAdd">추가</button>
+    <button class="tab" id="tabPanel">기록</button>
+  </div>
+</header>
+
+<main>
+  <!-- 학습 -->
+  <section id="viewStudy" style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div class="queue">
+      <div class="cells" id="cells"></div>
+      <div class="legend">
+        <span class="lrn">학습 <em id="cLearn" style="font-style:normal">0</em></span>
+        <span>복습 <em id="cReview" style="font-style:normal">0</em></span>
+        <span>신규 <em id="cNew" style="font-style:normal">0</em></span>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="genko"><span class="meta" id="cardMeta"></span><span id="word"></span></div>
+      <div class="back">
+        <button id="reveal">뜻 보기</button>
+        <div id="answer" class="hide fade">
+          <div class="reading" id="reading"></div>
+          <div class="meaning" id="meaning"></div>
+          <div class="ex" id="example"></div>
+          <div class="exko" id="exampleKo"></div>
+          <button class="speak" id="speak">🔊 듣기</button>
+        </div>
+      </div>
+    </div>
+    <div class="rate hide" id="rateBar"></div>
+  </section>
+
+  <!-- 완료 -->
+  <section id="viewDone" class="done hide">
+    <div class="mark">了</div>
+    <div style="font-size:15px;margin-top:16px;font-weight:500">오늘 몫 끝</div>
+    <div id="doneStat" style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8"></div>
+    <button class="ghost" id="skipDay" style="margin-top:26px;flex:none;padding:9px 18px">하루 건너뛰기 (테스트용)</button>
+  </section>
+
+  <!-- 추가 -->
+  <section id="viewAdd" class="pane hide">
+    <h2>카드 추가</h2>
+    <p class="sub">자막 작업하다 걸린 단어를 바로 넣는 자리</p>
+    <label><span>단어</span><input id="fWord" class="jp" autocapitalize="off"></label>
+    <label><span>읽기</span><input id="fReading" class="jp" autocapitalize="off"></label>
+    <label><span>뜻</span><input id="fMeaning"></label>
+    <label><span>예문</span><input id="fExample" class="jp" autocapitalize="off"></label>
+    <label><span>예문 해석</span><input id="fExampleKo"></label>
+    <div class="chips" id="tagChips"></div>
+    <div class="foot">
+      <button class="ghost" id="addCancel">취소</button>
+      <button class="solid" id="addSave" disabled>덱에 넣기</button>
+    </div>
+  </section>
+
+  <!-- 기록 -->
+  <section id="viewPanel" class="pane hide">
+    <h2>기록</h2>
+    <div id="stats"></div>
+    <div class="box">
+      <h3>백업</h3>
+      <p>드물지만 저장 공간이 부족하거나 사파리 데이터를 지우면 기록이 날아갈 수 있어. 가끔 파일로 내보내 두면 안전해.</p>
+      <div class="mini">
+        <button id="doExport">내보내기</button>
+        <button id="doImport">불러오기</button>
+      </div>
+      <input type="file" id="fileIn" accept="application/json" class="hide">
+    </div>
+    <div class="box">
+      <h3>테스트 도구</h3>
+      <p id="offsetLabel"></p>
+      <div class="mini">
+        <button data-skip="1">+1일</button>
+        <button data-skip="7">+7일</button>
+        <button data-skip="0">원래대로</button>
+      </div>
+    </div>
+    <div class="foot">
+      <button class="ghost" id="doReset">전부 초기화</button>
+      <button class="ghost" id="panelClose">돌아가기</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ============================ 데이터 ============================ */
+const SEED_RAW = [
+["相変わらず","あいかわらず","여전히, 변함없이","相変わらず忙しそうだね。","여전히 바빠 보이네.","N3","일반"],
+["目立つ","めだつ","눈에 띄다","あの看板はよく目立つ。","저 간판은 눈에 잘 띈다.","N3","일반"],
+["遠慮","えんりょ","사양함, 조심함","遠慮なく食べてください。","사양 말고 드세요.","N3","일반"],
+["逆に","ぎゃくに","오히려, 반대로","説明が逆に分かりにくくなった。","설명이 오히려 이해하기 어려워졌다.","N3","일반"],
+["諦める","あきらめる","포기하다","途中で諦めたくない。","도중에 포기하고 싶지 않다.","N3","일반"],
+["迷う","まよう","망설이다, 헤매다","どっちを買うか迷っている。","어느 쪽을 살지 망설이고 있다.","N3","일반"],
+["支度","したく","채비, 준비","そろそろ出かける支度をしよう。","슬슬 나갈 채비를 하자.","N3","일반"],
+["一応","いちおう","일단, 우선","一応確認しておくね。","일단 확인해 둘게.","N3","일반"],
+["結局","けっきょく","결국","結局行かなかった。","결국 가지 않았다.","N3","일반"],
+["詳しい","くわしい","자세하다; 정통하다","彼はアニメに詳しい。","그는 애니메이션에 정통하다.","N3","일반"],
+["苦手","にがて","서투름, 질색임","人混みが苦手だ。","사람 많은 곳이 질색이다.","N3","일반"],
+["面倒","めんどう","성가심, 번거로움","手続きが面倒だ。","절차가 번거롭다.","N3","일반"],
+["懐かしい","なつかしい","그립다","この曲、懐かしいね。","이 곡, 그립네.","N3","일반"],
+["訪れる","おとずれる","방문하다; 찾아오다","毎年この街を訪れる。","매년 이 거리를 방문한다.","N2","일반"],
+["揃う","そろう","갖춰지다, 모이다","メンバーが全員揃った。","멤버가 전원 모였다.","N2","일반"],
+["通う","かよう","다니다","週に二回ジムに通う。","주 2회 헬스장에 다닌다.","N3","일반"],
+["発売","はつばい","발매","新しいアルバムが発売された。","새 앨범이 발매됐다.","N2","라이브"],
+["抽選","ちゅうせん","추첨","チケットは抽選で決まる。","티켓은 추첨으로 정해진다.","N1","라이브"],
+["特典","とくてん","특전","初回限定の特典が付く。","초회한정 특전이 붙는다.","N1","라이브"],
+["会場","かいじょう","행사장, 공연장","会場は駅から近い。","공연장은 역에서 가깝다.","N3","라이브"],
+["物販","ぶっぱん","굿즈 판매(부스)","物販の列がすごく長い。","굿즈 판매 줄이 엄청 길다.","—","라이브"],
+["開催","かいさい","개최","展示会は来月開催される。","전시회는 다음 달에 개최된다.","N2","라이브"],
+["混雑","こんざつ","혼잡","土日はかなり混雑する。","주말은 상당히 혼잡하다.","N2","라이브"],
+["盛り上がる","もりあがる","분위기가 달아오르다","会場がすごく盛り上がった。","공연장이 엄청 달아올랐다.","N2","라이브"],
+["感想","かんそう","감상, 소감","ライブの感想を書いた。","라이브 감상을 썼다.","N3","라이브"],
+["順番","じゅんばん","순서, 차례","順番に並んでください。","순서대로 줄 서 주세요.","N4","라이브"],
+["差し入れ","さしいれ","격려 선물(먹을 것 등)","スタッフに差し入れを渡した。","스태프에게 간식을 건넸다.","N1","라이브"],
+["在庫","ざいこ","재고","人気の商品は在庫が切れている。","인기 상품은 재고가 떨어졌다.","N2","가게"],
+["仕入れ","しいれ","매입, 사입","フランスからチーズを仕入れる。","프랑스에서 치즈를 매입한다.","N2","가게"],
+["賞味期限","しょうみきげん","품질유지기한","賞味期限を確認してください。","유통기한을 확인해 주세요.","N2","가게"],
+["納品","のうひん","납품","明日の朝に納品される。","내일 아침에 납품된다.","N1","가게"],
+["対応","たいおう","대응, 응대","外国のお客様に英語で対応する。","외국인 손님에게 영어로 응대한다.","N2","가게"],
+["割引","わりびき","할인","学生は割引がある。","학생은 할인이 있다.","N3","가게"]
+];
+const fresh = () => SEED_RAW.map((r,i)=>({
+  id:'s'+i, word:r[0], reading:r[1], meaning:r[2], example:r[3], exampleKo:r[4],
+  level:r[5], tag:r[6], state:'new', step:0, ease:2.5, interval:0, due:0, reps:0, lapses:0
+}));
+
+/* ============================ 알고리즘 ============================ */
+const MIN=60000, DAY=86400000, STEPS=[1,10], NEW_PER_DAY=10, KEY='jp-srs-v1';
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+
+function nextCard(c0, rating, now){
+  const c={...c0};
+  const learning = c.state==='new'||c.state==='learning'||c.state==='relearning';
+  if(learning){
+    if(rating===0){ c.step=0; c.state=c.state==='relearning'?'relearning':'learning'; c.due=now+STEPS[0]*MIN; }
+    else if(rating===1){ c.state=c.state==='relearning'?'relearning':'learning';
+      c.due=now+STEPS[Math.min(c.step,STEPS.length-1)]*MIN; }
+    else if(rating===2){
+      const s=c.step+1;
+      if(s>=STEPS.length){ c.state='review'; c.step=0;
+        c.interval=c.lapses>0?Math.max(1,Math.round(c.interval*0.6)):1; c.due=now+c.interval*DAY; }
+      else { c.step=s; c.state=c.state==='relearning'?'relearning':'learning'; c.due=now+STEPS[s]*MIN; }
+    } else { c.state='review'; c.step=0; c.interval=4; c.due=now+4*DAY; }
+  } else {
+    if(rating===0){
+      c.lapses++; c.ease=clamp(c.ease-0.2,1.3,3.0); c.state='relearning'; c.step=0;
+      c.interval=Math.max(1,Math.round(c.interval*0.4)); c.due=now+STEPS[0]*MIN;
+    } else {
+      const mult = rating===1?1.2 : rating===2?c.ease : c.ease*1.3;
+      const d = rating===1?-0.15 : rating===3?0.15 : 0;
+      c.ease=clamp(c.ease+d,1.3,3.0);
+      c.interval=Math.max(1,Math.round(Math.max(c.interval,1)*mult));
+      c.due=now+c.interval*DAY;
+    }
+  }
+  c.reps++; return c;
+}
+function preview(c,r,now){
+  const ms=nextCard(c,r,now).due-now;
+  if(ms<45*MIN) return Math.round(ms/MIN)+'분';
+  if(ms<DAY) return Math.round(ms/(60*MIN))+'시간';
+  const d=Math.round(ms/DAY);
+  if(d<31) return d+'일';
+  if(d<365) return (d/30).toFixed(d/30<10?1:0)+'개월';
+  return (d/365).toFixed(1)+'년';
+}
+
+/* ============================ 저장 ============================ */
+let mem=null;
+function store(v){
+  try{ if(v===undefined) return localStorage.getItem(KEY); localStorage.setItem(KEY,v); return v; }
+  catch(e){ if(v===undefined) return mem; mem=v; return v; }
+}
+if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+
+let S = (()=>{ try{ const d=JSON.parse(store()); if(d&&d.cards) return d; }catch(e){}
+  return {cards:fresh(), offset:0, introDay:'', introCount:0}; })();
+let session={done:0,again:0}, revealed=false, view='study';
+const persist=()=>store(JSON.stringify(S));
+const now=()=>Date.now()+S.offset;
+const dayKey=t=>new Date(t).toISOString().slice(0,10);
+
+/* ============================ 큐 ============================ */
+function introducedToday(){ return S.introDay===dayKey(now())?S.introCount:0; }
+function queue(){
+  const t=now();
+  const lrn=S.cards.filter(c=>(c.state==='learning'||c.state==='relearning')&&c.due<=t);
+  const rev=S.cards.filter(c=>c.state==='review'&&c.due<=t).sort((a,b)=>a.due-b.due);
+  const nw=S.cards.filter(c=>c.state==='new').slice(0,Math.max(0,NEW_PER_DAY-introducedToday()));
+  return [...lrn,...rev,...nw];
+}
+
+/* ============================ 화면 ============================ */
+const $=id=>document.getElementById(id);
+const views={study:$('viewStudy'),done:$('viewDone'),add:$('viewAdd'),panel:$('viewPanel')};
+
+function show(v){
+  view=v;
+  Object.entries(views).forEach(([k,el])=>el.classList.toggle('hide',k!==v));
+  if(v==='study'||v==='done') views.study.style.display = v==='study'?'flex':'none';
+  $('tabAdd').classList.toggle('on',v==='add');
+  $('tabPanel').classList.toggle('on',v==='panel');
+  if(v==='panel') renderPanel();
+  render();
+}
+
+function render(){
+  const q=queue();
+  $('dueCount').textContent=q.length+' DUE';
+  if(view!=='study'&&view!=='done') return;
+  if(!q.length){ if(view!=='done'){ views.study.style.display='none'; views.done.classList.remove('hide'); view='done'; }
+    const nx=S.cards.filter(c=>c.due>now()).sort((a,b)=>a.due-b.due)[0];
+    const w=nx?nx.due-now():null;
+    const lbl = w==null?'—' : w<60*MIN?Math.max(1,Math.round(w/MIN))+'분 뒤'
+      : w<DAY?Math.round(w/(60*MIN))+'시간 뒤' : Math.round(w/DAY)+'일 뒤';
+    $('doneStat').innerHTML=`${session.done}장 채점 · 다시 ${session.again}장<br>다음 카드 ${lbl}`;
+    return;
+  }
+  if(view==='done'){ views.done.classList.add('hide'); views.study.style.display='flex'; view='study'; }
+
+  const c=q[0], t=now();
+  const lrn=q.filter(x=>x.state==='learning'||x.state==='relearning').length;
+  const rev=q.filter(x=>x.state==='review').length;
+  const nw=q.filter(x=>x.state==='new').length;
+  $('cLearn').textContent=lrn; $('cReview').textContent=rev; $('cNew').textContent=nw;
+
+  const total=q.length+session.done, n=Math.min(total,24);
+  const filled=Math.round(session.done/Math.max(total,1)*n);
+  $('cells').innerHTML=Array.from({length:n},(_,i)=>`<i class="${i<filled?'on':''}"></i>`).join('');
+
+  $('word').textContent=c.word;
+  $('word').style.fontSize=(c.word.length>4?34:c.word.length>2?44:60)+'px';
+  $('cardMeta').textContent=c.tag+' · '+c.level;
+  $('reading').textContent=c.reading;
+  $('meaning').textContent=c.meaning;
+  $('example').textContent=c.example;
+  $('exampleKo').textContent=c.exampleKo;
+
+  $('answer').classList.toggle('hide',!revealed);
+  $('reveal').classList.toggle('hide',revealed);
+  $('rateBar').classList.toggle('hide',!revealed);
+  if(revealed){
+    $('rateBar').innerHTML=['다시','어려움','보통','쉬움'].map((l,i)=>
+      `<button data-r="${i}"><b class="${i===0?'again':''}">${l}</b><s>${preview(c,i,t)}</s></button>`).join('');
+  }
+}
+
+/* ============================ 동작 ============================ */
+$('reveal').onclick=()=>{ revealed=true; render(); };
+$('rateBar').onclick=e=>{
+  const b=e.target.closest('[data-r]'); if(!b) return;
+  const r=+b.dataset.r, q=queue(); if(!q.length) return;
+  const c=q[0], wasNew=c.state==='new', up=nextCard(c,r,now());
+  S.cards=S.cards.map(x=>x.id===c.id?up:x);
+  if(wasNew){ S.introDay=dayKey(now()); S.introCount=introducedToday()+1; }
+  session.done++; if(r===0) session.again++;
+  revealed=false; persist(); render();
+};
+
+/* 일본어 음성 — iOS 내장 TTS */
+$('speak').onclick=()=>{
+  const q=queue(); if(!q.length||!window.speechSynthesis) return;
+  const u=new SpeechSynthesisUtterance(q[0].example||q[0].word);
+  u.lang='ja-JP'; u.rate=0.9;
+  const v=speechSynthesis.getVoices().find(x=>x.lang&&x.lang.replace('_','-').startsWith('ja'));
+  if(v) u.voice=v;
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+};
+
+$('skipDay').onclick=()=>{ S.offset+=DAY; persist(); render(); };
+$('tabAdd').onclick=()=>show(view==='add'?'study':'add');
+$('tabPanel').onclick=()=>show(view==='panel'?'study':'panel');
+$('addCancel').onclick=()=>show('study');
+$('panelClose').onclick=()=>show('study');
+
+/* 추가 */
+let tag='일반';
+$('tagChips').innerHTML=['일반','라이브','가게'].map(t=>
+  `<button data-t="${t}" class="${t===tag?'on':''}">${t}</button>`).join('');
+$('tagChips').onclick=e=>{ const b=e.target.closest('[data-t]'); if(!b) return;
+  tag=b.dataset.t; [...$('tagChips').children].forEach(x=>x.classList.toggle('on',x.dataset.t===tag)); };
+const inputs=['fWord','fReading','fMeaning','fExample','fExampleKo'].map($);
+inputs.forEach(i=>i.oninput=()=>{ $('addSave').disabled=!($('fWord').value.trim()&&$('fMeaning').value.trim()); });
+$('addSave').onclick=()=>{
+  S.cards.push({id:'u'+Date.now(), word:$('fWord').value.trim(), reading:$('fReading').value.trim(),
+    meaning:$('fMeaning').value.trim(), example:$('fExample').value.trim(),
+    exampleKo:$('fExampleKo').value.trim(), level:'추가', tag,
+    state:'new', step:0, ease:2.5, interval:0, due:0, reps:0, lapses:0});
+  inputs.forEach(i=>i.value=''); $('addSave').disabled=true; persist(); show('study');
+};
+
+/* 기록 */
+function renderPanel(){
+  const c=S.cards;
+  const rows=[['전체 카드',c.length],
+    ['미학습',c.filter(x=>x.state==='new').length],
+    ['학습 중',c.filter(x=>x.state==='learning'||x.state==='relearning').length],
+    ['복습 단계',c.filter(x=>x.state==='review').length],
+    ['장기 기억 (21일+)',c.filter(x=>x.interval>=21).length],
+    ['평균 난이도 계수',(c.filter(x=>x.reps>0).reduce((a,x)=>a+x.ease,0)/Math.max(1,c.filter(x=>x.reps>0).length)||2.5).toFixed(2)]];
+  $('stats').innerHTML=rows.map(([k,v])=>`<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
+  $('offsetLabel').innerHTML=`며칠 뒤 카드가 어떻게 돌아오는지 기다리지 않고 보려면 시간을 밀어봐.<br>현재 ${S.offset===0?'실제 시각':'+'+Math.round(S.offset/DAY)+'일'} · ${dayKey(now())}`;
+}
+document.querySelector('#viewPanel .box:last-of-type .mini').onclick=e=>{
+  const b=e.target.closest('[data-skip]'); if(!b) return;
+  const d=+b.dataset.skip; S.offset = d===0?0:S.offset+d*DAY; persist(); renderPanel(); render();
+};
+$('doReset').onclick=()=>{ if(!confirm('학습 기록을 전부 지울까?')) return;
+  S={cards:fresh(),offset:0,introDay:'',introCount:0}; session={done:0,again:0};
+  revealed=false; persist(); show('study'); };
+$('doExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=`일본어-백업-${dayKey(Date.now())}.json`;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+$('doImport').onclick=()=>$('fileIn').click();
+$('fileIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result);
+    if(!d.cards) throw 0; S=d; persist(); renderPanel(); render(); alert('불러왔어.'); }
+    catch(err){ alert('파일을 읽지 못했어.'); } };
+  r.readAsText(f); e.target.value='';
+};
+
+/* 키보드 (데스크톱 확인용) */
+addEventListener('keydown',e=>{
+  if(view!=='study') return;
+  if(e.key===' '||e.key==='Enter'){ e.preventDefault(); revealed=true; render(); }
+  else if(revealed&&['1','2','3','4'].includes(e.key)){
+    e.preventDefault(); const b=$('rateBar').querySelector(`[data-r="${+e.key-1}"]`); if(b) b.click();
+  }
+});
+
+if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+if(window.speechSynthesis) speechSynthesis.getVoices();
+show('study');
+</script>
+</body>
+</html>
