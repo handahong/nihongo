@@ -224,6 +224,7 @@
     <div class="box">
       <h3>단어장</h3>
       <div id="deckList"></div>
+      <div class="mini" style="margin-top:10px"><button id="reload">단어장 다시 불러오기</button></div>
     </div>
     <div class="box">
       <h3>백업</h3>
@@ -305,7 +306,7 @@ function toHangul(src,lit){
 
 /* ======================= 단어장 (외부 파일) ======================= */
 const DECK_KEY='jp-srs-decks';
-let DECK_META=[];
+let DECK_META=[], DECK_OK={}, DECK_ERR={};
 function statFields(){return {state:'new',interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false};}
 function mergeDeck(list){
   const idx=new Map(S.cards.map(c=>[c.id,c]));
@@ -321,7 +322,8 @@ function mergeDeck(list){
 }
 async function syncDecks(){
   let meta=null;
-  try{ meta=await (await fetch('decks.json',{cache:'no-store'})).json(); }
+  const bust='?t='+Date.now();
+  try{ meta=await (await fetch('decks.json'+bust,{cache:'no-store'})).json(); }
   catch(e){ try{ meta=JSON.parse(localStorage.getItem(DECK_KEY)); }catch(e2){} }
   if(!meta||!Array.isArray(meta.decks)) return 0;
   DECK_META=meta.decks;
@@ -330,9 +332,12 @@ async function syncDecks(){
   for(const d of DECK_META){
     if(S.decks[d.id]===undefined) S.decks[d.id]=true;
     try{
-      const j=await (await fetch(d.file,{cache:'no-store'})).json();
-      if(Array.isArray(j.cards)) added+=mergeDeck(j.cards);
-    }catch(e){}
+      const res=await fetch(d.file+bust,{cache:'no-store'});
+      if(!res.ok) throw new Error(res.status);
+      const j=await res.json();
+      if(!Array.isArray(j.cards)) throw new Error('형식 오류');
+      added+=mergeDeck(j.cards); DECK_OK[d.id]=j.cards.length;
+    }catch(e){ DECK_ERR[d.id]=String(e.message||e).slice(0,40); }
   }
   if(added) persist();
   return added;
@@ -553,7 +558,10 @@ function renderPanel(){
   $('deckList').innerHTML=DECK_META.map(d=>{
     const n=S.cards.filter(c=>c.deck===d.id).length;
     const done=S.cards.filter(c=>c.deck===d.id&&c.state!=='new').length;
-    return `<div class="row"><span>${d.name}<br><em style="font-style:normal;font-size:10.5px;color:var(--muted)">${done} / ${n}장 시작함</em></span>`+
+    const err=DECK_ERR[d.id];
+    const sub=err?`<em style="font-style:normal;font-size:10.5px;color:var(--miss)">불러오기 실패 (${err})</em>`
+                 :`<em style="font-style:normal;font-size:10.5px;color:var(--muted)">${done} / ${n}장 시작함</em>`;
+    return `<div class="row"><span>${d.name}<br>${sub}</span>`+
       `<span class="seg" data-deck="${d.id}"><button data-v="1">켬</button><button data-v="0">끔</button></span></div>`;
   }).join('')||'<p style="margin:0">단어장을 불러오지 못했어. 인터넷에 한 번 연결해줘.</p>';
   $('deckList').querySelectorAll('.seg').forEach(sg=>{
@@ -564,6 +572,10 @@ function renderPanel(){
   [...$('segNew').children].forEach(b=>b.classList.toggle('on',+b.dataset.n===S.newPerDay));
   $('offsetLabel').innerHTML=`며칠 뒤 카드가 어떻게 돌아오는지 기다리지 않고 보려면 시간을 밀어봐.<br>현재 ${S.offset===0?'실제 시각':'+'+Math.round(S.offset/DAY)+'일'} · ${dayKey(now())}`;
 }
+$('reload').onclick=async()=>{ $('reload').textContent='불러오는 중…';
+  DECK_OK={}; DECK_ERR={}; const n=await syncDecks(); S.queue=null; persist();
+  $('reload').textContent='단어장 다시 불러오기'; renderPanel(); render();
+  alert(n?`${n}장 새로 들어왔어.`:'새로 들어온 카드는 없어.'); };
 $('deckList').onclick=e=>{const b=e.target.closest('[data-v]'); if(!b)return;
   const idd=b.parentElement.dataset.deck;
   S.decks[idd]=b.dataset.v==='1';
