@@ -1,0 +1,34 @@
+{
+  "decks": [
+    {
+      "id": "core",
+      "file": "words-core.json",
+      "name": "기본 어휘",
+      "desc": "처음 넣은 33장"
+    },
+    {
+      "id": "jlpt",
+      "file": "words-jlpt.json",
+      "name": "JLPT N3·N2",
+      "desc": "시험 빈출 어휘 155장"
+    },
+    {
+      "id": "vocab",
+      "file": "words-vocab.json",
+      "name": "어휘 확장 N4~N2",
+      "desc": "뜻만 있는 기본 어휘 564장"
+    },
+    {
+      "id": "travel",
+      "file": "words-travel.json",
+      "name": "여행 회화",
+      "desc": "경기·공연·음식점 문장 67개"
+    },
+    {
+      "id": "sub",
+      "file": "words-sub.json",
+      "name": "내 자막에서",
+      "desc": "브이로그 18편에서 뽑은 89장"
+    }
+  ]
+}
