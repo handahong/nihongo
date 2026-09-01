@@ -1,5 +1,5 @@
 // 오프라인 캐시. 파일을 고치면 아래 버전 숫자를 올려야 새 버전이 반영돼.
-const V = 'jp-srs-v1';
+const V = 'jp-srs-v2';
 const FILES = ['./', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 

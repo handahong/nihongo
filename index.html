@@ -13,22 +13,20 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root{
-    --paper:#FBFAF7; --wash:#F1EEE6; --rule:#7E9F8B;
-    --rule-faint:rgba(126,159,139,.35); --ink:#1B2A33; --ink-soft:#4A5C66;
-    --muted:#7A868C; --seal:#B33A2B; --line:rgba(27,42,51,.12);
+    --paper:#FBFAF7; --wash:#F1EEE6; --rule:#7E9F8B; --rule-faint:rgba(126,159,139,.35);
+    --ink:#1B2A33; --ink-soft:#4A5C66; --muted:#6E7A80; --line:rgba(27,42,51,.12);
+    --miss:#B33A2B; --mid:#E5E0D4; --got:#3F6B57;
     --jp:'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP','Nanum Myeongjo',serif;
     --ui:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',system-ui,-apple-system,sans-serif;
     --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;margin:0}
-  body{
-    background:var(--paper);font-family:var(--ui);color:var(--ink);
-    display:flex;flex-direction:column;
-    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    overscroll-behavior:none;-webkit-user-select:none;user-select:none;
-  }
-  button{font-family:var(--ui);cursor:pointer}
+  body{background:var(--paper);font-family:var(--ui);color:var(--ink);
+    display:flex;flex-direction:column;overscroll-behavior:none;
+    -webkit-user-select:none;user-select:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+  button{font-family:var(--ui);cursor:pointer;color:inherit}
   button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .hide{display:none!important}
 
@@ -36,91 +34,102 @@
     padding:12px 16px;border-bottom:1px solid var(--line);flex:none}
   .brand{font-family:var(--jp);font-size:17px;letter-spacing:.08em}
   .due{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.1em;margin-left:10px}
-  .tabs{display:flex;gap:6px;align-items:center}
-  .tab{font-size:11.5px;padding:5px 10px;border:1px solid var(--line);
+  .tabs{display:flex;gap:6px}
+  .tab{font-size:12px;padding:7px 12px;border:1px solid var(--line);
     background:transparent;color:var(--ink-soft);border-radius:2px}
   .tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
   main{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #viewStudy{display:flex;flex-direction:column;flex:1;min-height:0}
 
-  .queue{padding:14px 16px 4px;flex:none}
+  .queue{padding:12px 16px 0;flex:none}
   .cells{display:flex;gap:2px}
   .cells i{flex:1;height:6px;border:1px solid var(--rule-faint)}
   .cells i.on{background:var(--rule)}
-  .legend{display:flex;gap:12px;margin-top:8px;font-family:var(--mono);
-    font-size:10.5px;color:var(--muted);letter-spacing:.05em}
-  .legend .lrn{color:var(--seal)}
+  .legend{display:flex;gap:12px;margin-top:7px;align-items:center;
+    font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.05em}
+  .legend .lrn{color:var(--miss)}
+  #skip{margin-left:auto;font-size:11px;padding:4px 9px;border:1px solid var(--line);
+    background:transparent;color:var(--muted);border-radius:2px;font-family:var(--ui)}
 
   .stage{flex:1;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;padding:8px 20px 20px;gap:22px}
-  .genko{width:208px;height:208px;border:1.5px solid var(--rule);position:relative;
+    justify-content:center;padding:10px 18px 14px;gap:18px;min-height:0}
+  .genko{width:190px;height:190px;border:1.5px solid var(--rule);position:relative;
     display:flex;align-items:center;justify-content:center;background:var(--paper);flex:none}
-  .genko:before,.genko:after{content:'';position:absolute;background-repeat:repeat}
-  .genko:before{left:50%;top:0;bottom:0;width:1px;
+  .genko:before{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;
     background:repeating-linear-gradient(to bottom,var(--rule-faint) 0 4px,transparent 4px 9px)}
-  .genko:after{top:50%;left:0;right:0;height:1px;
+  .genko:after{content:'';position:absolute;top:50%;left:0;right:0;height:1px;
     background:repeating-linear-gradient(to right,var(--rule-faint) 0 4px,transparent 4px 9px)}
-  #word{font-family:var(--jp);color:var(--ink);letter-spacing:.04em;
-    position:relative;padding:0 8px;text-align:center;line-height:1.15}
+  #word{font-family:var(--jp);letter-spacing:.04em;position:relative;
+    padding:0 8px;text-align:center;line-height:1.15}
   .meta{position:absolute;top:-1px;left:-1px;font-family:var(--mono);font-size:9px;
     color:var(--rule);background:var(--paper);padding:2px 5px;letter-spacing:.08em}
 
-  .back{width:100%;min-height:150px;text-align:center}
-  #reveal{width:100%;padding:14px 0;background:transparent;border:1px dashed var(--rule-faint);
-    color:var(--muted);font-size:13px;border-radius:2px}
-  .reading{font-family:var(--jp);font-size:19px;color:var(--rule);letter-spacing:.1em}
-  .meaning{font-size:16.5px;margin-top:8px;font-weight:500}
-  .ex{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
-    font-family:var(--jp);font-size:15px;color:var(--ink-soft);line-height:1.7}
+  #answer{text-align:center;width:100%}
+  .reading{font-family:var(--jp);font-size:20px;color:var(--rule);letter-spacing:.1em}
+  .hangul{font-size:14px;color:var(--muted);margin-top:3px;letter-spacing:.02em}
+  .meaning{font-size:18px;margin-top:10px;font-weight:600}
+  .ex{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);
+    font-family:var(--jp);font-size:15.5px;color:var(--ink-soft);line-height:1.75}
   .exko{font-size:12.5px;color:var(--muted);margin-top:4px}
-  .speak{margin-top:14px;padding:6px 14px;font-size:11.5px;background:transparent;
+  .sound{display:flex;gap:6px;justify-content:center;margin-top:14px}
+  .sound button{padding:7px 14px;font-size:11.5px;background:transparent;
     border:1px solid var(--line);color:var(--ink-soft);border-radius:2px;font-family:var(--mono)}
 
-  .rate{display:flex;border-top:1px solid var(--line);flex:none}
-  .rate button{flex:1;padding:13px 2px 11px;background:transparent;border:none;
-    border-right:1px solid var(--line)}
-  .rate button:last-child{border-right:none}
-  .rate b{display:block;font-size:13px;font-weight:500}
-  .rate b.again{color:var(--seal)}
-  .rate s{display:block;text-decoration:none;font-family:var(--mono);
-    font-size:10.5px;color:var(--muted);margin-top:3px}
+  .actions{flex:none;padding:0 10px calc(10px + env(safe-area-inset-bottom));background:var(--paper)}
+  #reveal{width:100%;height:64px;font-size:16px;font-weight:600;border:none;border-radius:4px;
+    background:var(--ink);color:var(--paper)}
+  #grades{display:flex;gap:7px}
+  .g{flex:1;height:76px;border:none;border-radius:4px;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
+  .g b{font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+  .g s{text-decoration:none;font-size:12px;font-family:var(--mono);opacity:.82}
+  .g.miss{background:var(--miss);color:#fff}
+  .g.mid{background:var(--mid);color:var(--ink)}
+  .g.got{background:var(--got);color:#fff}
 
-  .pane{padding:20px 18px;flex:1;display:flex;flex-direction:column}
-  .pane h2{font-size:13.5px;font-weight:500;margin:0 0 4px}
+  .pane{padding:20px 18px calc(20px + env(safe-area-inset-bottom));flex:1;display:flex;flex-direction:column}
+  .pane h2{font-size:13.5px;font-weight:600;margin:0 0 4px}
   .pane p.sub{font-size:11.5px;color:var(--muted);margin:0 0 16px}
   label{display:block;margin-bottom:11px}
   label span{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.12em}
-  label input{width:100%;margin-top:4px;padding:7px 0;border:none;
-    border-bottom:1px solid var(--line);background:transparent;font-size:14px;
-    color:var(--ink);outline:none;-webkit-user-select:text;user-select:text;font-family:var(--ui)}
-  label input.jp{font-family:var(--jp);font-size:16px}
+  label input{width:100%;margin-top:4px;padding:8px 0;border:none;border-bottom:1px solid var(--line);
+    background:transparent;font-size:15px;color:var(--ink);outline:none;
+    -webkit-user-select:text;user-select:text;font-family:var(--ui);border-radius:0}
+  label input.jp{font-family:var(--jp);font-size:17px}
+  .hint{font-size:11px;color:var(--rule);margin-top:3px;min-height:14px}
   .chips{display:flex;gap:6px;margin:6px 0 18px}
-  .chips button{flex:1;padding:7px 0;font-size:11.5px;border:1px solid var(--line);
+  .chips button{flex:1;padding:9px 0;font-size:12px;border:1px solid var(--line);
     background:transparent;color:var(--muted);border-radius:2px}
   .chips button.on{border-color:var(--rule);background:var(--wash);color:var(--ink)}
-  .row{display:flex;justify-content:space-between;padding:9px 0;
+  .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;
     border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
   .row b{font-family:var(--mono);font-weight:400;color:var(--ink)}
+  .row .seg{display:flex;gap:4px}
+  .row .seg button{padding:5px 10px;font-size:11px;font-family:var(--mono);
+    border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:2px}
+  .row .seg button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   .foot{margin-top:auto;display:flex;gap:8px;padding-top:20px}
-  .ghost{flex:1;padding:11px 0;border:1px solid var(--line);background:transparent;
+  .ghost{flex:1;padding:12px 0;border:1px solid var(--line);background:transparent;
     color:var(--ink-soft);font-size:13px;border-radius:2px}
-  .solid{flex:2;padding:11px 0;border:none;background:var(--ink);color:var(--paper);
+  .solid{flex:2;padding:12px 0;border:none;background:var(--ink);color:var(--paper);
     font-size:13px;border-radius:2px}
   .solid:disabled{background:var(--line);color:var(--muted)}
-  .box{margin-top:22px;padding:13px;border:1px dashed var(--rule-faint);border-radius:2px}
+  .box{margin-top:20px;padding:13px;border:1px dashed var(--rule-faint);border-radius:2px}
   .box h3{font-family:var(--mono);font-size:9.5px;color:var(--rule);
     letter-spacing:.12em;margin:0 0 6px;font-weight:400}
-  .box p{font-size:11.5px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+  .box p{font-size:11.5px;color:var(--muted);margin:0 0 10px;line-height:1.55}
   .mini{display:flex;gap:6px}
-  .mini button{flex:1;padding:6px 0;font-size:11px;font-family:var(--mono);
+  .mini button{flex:1;padding:8px 0;font-size:11px;font-family:var(--mono);
     border:1px solid var(--line);background:transparent;color:var(--ink-soft);border-radius:2px}
 
   .done{flex:1;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;padding:28px;text-align:center;gap:0}
-  .done .mark{font-family:var(--jp);font-size:40px;color:var(--rule);letter-spacing:.15em}
-  .fade{animation:in .18s ease-out}
-  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    justify-content:center;padding:28px;text-align:center}
+  .done .mark{font-family:var(--jp);font-size:42px;color:var(--rule);letter-spacing:.15em}
+  .fade{animation:in .16s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){.fade{animation:none}}
+  @media (max-height:680px){.genko{width:150px;height:150px}.stage{gap:12px}}
 </style>
 </head>
 <body>
@@ -134,49 +143,58 @@
 </header>
 
 <main>
-  <!-- 학습 -->
-  <section id="viewStudy" style="display:flex;flex-direction:column;flex:1;min-height:0">
+  <section id="viewStudy">
     <div class="queue">
       <div class="cells" id="cells"></div>
       <div class="legend">
         <span class="lrn">학습 <em id="cLearn" style="font-style:normal">0</em></span>
         <span>복습 <em id="cReview" style="font-style:normal">0</em></span>
         <span>신규 <em id="cNew" style="font-style:normal">0</em></span>
+        <button id="skip">건너뛰기</button>
       </div>
     </div>
+
     <div class="stage">
       <div class="genko"><span class="meta" id="cardMeta"></span><span id="word"></span></div>
-      <div class="back">
-        <button id="reveal">뜻 보기</button>
-        <div id="answer" class="hide fade">
-          <div class="reading" id="reading"></div>
-          <div class="meaning" id="meaning"></div>
-          <div class="ex" id="example"></div>
-          <div class="exko" id="exampleKo"></div>
-          <button class="speak" id="speak">🔊 듣기</button>
+      <div id="answer" class="hide fade">
+        <div class="reading" id="reading"></div>
+        <div class="hangul" id="hangul"></div>
+        <div class="meaning" id="meaning"></div>
+        <div class="ex" id="example"></div>
+        <div class="exko" id="exampleKo"></div>
+        <div class="sound">
+          <button id="sayWord">🔊 단어</button>
+          <button id="saySent">🔊 예문</button>
         </div>
       </div>
     </div>
-    <div class="rate hide" id="rateBar"></div>
+
+    <div class="actions">
+      <button id="reveal">뜻 보기</button>
+      <div id="grades" class="hide">
+        <button class="g miss" data-g="0"><b>모름</b><s></s></button>
+        <button class="g mid"  data-g="1"><b>애매</b><s></s></button>
+        <button class="g got"  data-g="2"><b>알아</b><s></s></button>
+      </div>
+    </div>
   </section>
 
-  <!-- 완료 -->
   <section id="viewDone" class="done hide">
     <div class="mark">了</div>
-    <div style="font-size:15px;margin-top:16px;font-weight:500">오늘 몫 끝</div>
+    <div style="font-size:15px;margin-top:16px;font-weight:600">오늘 몫 끝</div>
     <div id="doneStat" style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8"></div>
-    <button class="ghost" id="skipDay" style="margin-top:26px;flex:none;padding:9px 18px">하루 건너뛰기 (테스트용)</button>
+    <button class="ghost" id="skipDay" style="margin-top:26px;flex:none;padding:10px 18px">하루 건너뛰기 (테스트용)</button>
   </section>
 
-  <!-- 추가 -->
   <section id="viewAdd" class="pane hide">
     <h2>카드 추가</h2>
     <p class="sub">자막 작업하다 걸린 단어를 바로 넣는 자리</p>
-    <label><span>단어</span><input id="fWord" class="jp" autocapitalize="off"></label>
-    <label><span>읽기</span><input id="fReading" class="jp" autocapitalize="off"></label>
-    <label><span>뜻</span><input id="fMeaning"></label>
-    <label><span>예문</span><input id="fExample" class="jp" autocapitalize="off"></label>
-    <label><span>예문 해석</span><input id="fExampleKo"></label>
+    <label><span>단어</span><input id="fWord" class="jp" autocapitalize="off" autocomplete="off"></label>
+    <label><span>읽기 (히라가나)</span><input id="fReading" class="jp" autocapitalize="off" autocomplete="off">
+      <div class="hint" id="readHint"></div></label>
+    <label><span>뜻</span><input id="fMeaning" autocomplete="off"></label>
+    <label><span>예문</span><input id="fExample" class="jp" autocapitalize="off" autocomplete="off"></label>
+    <label><span>예문 해석</span><input id="fExampleKo" autocomplete="off"></label>
     <div class="chips" id="tagChips"></div>
     <div class="foot">
       <button class="ghost" id="addCancel">취소</button>
@@ -184,18 +202,26 @@
     </div>
   </section>
 
-  <!-- 기록 -->
   <section id="viewPanel" class="pane hide">
     <h2>기록</h2>
     <div id="stats"></div>
     <div class="box">
+      <h3>설정</h3>
+      <div class="row"><span>한글 발음 표시</span>
+        <span class="seg" id="segHangul">
+          <button data-h="1">켬</button><button data-h="0">끔</button></span></div>
+      <div class="row" style="border-bottom:none"><span>하루 새 단어</span>
+        <span class="seg" id="segNew">
+          <button data-n="5">5</button><button data-n="10">10</button><button data-n="20">20</button></span></div>
+    </div>
+    <div class="box">
       <h3>백업</h3>
-      <p>드물지만 저장 공간이 부족하거나 사파리 데이터를 지우면 기록이 날아갈 수 있어. 가끔 파일로 내보내 두면 안전해.</p>
+      <p>저장 공간이 부족하거나 사파리 데이터를 지우면 기록이 날아갈 수 있어. 가끔 파일로 내보내 두면 안전해.</p>
       <div class="mini">
         <button id="doExport">내보내기</button>
         <button id="doImport">불러오기</button>
       </div>
-      <input type="file" id="fileIn" accept="application/json" class="hide">
+      <input type="file" id="fileIn" accept="application/json,.json" class="hide">
     </div>
     <div class="box">
       <h3>테스트 도구</h3>
@@ -214,8 +240,59 @@
 </main>
 
 <script>
+/* ========================= 가나 → 한글 ========================= */
+const YOUON={'きゃ':'캬','きゅ':'큐','きょ':'쿄','ぎゃ':'갸','ぎゅ':'규','ぎょ':'교',
+'しゃ':'샤','しゅ':'슈','しょ':'쇼','じゃ':'쟈','じゅ':'쥬','じょ':'죠',
+'ちゃ':'챠','ちゅ':'츄','ちょ':'쵸','ぢゃ':'쟈','ぢゅ':'쥬','ぢょ':'죠',
+'にゃ':'냐','にゅ':'뉴','にょ':'뇨','ひゃ':'햐','ひゅ':'휴','ひょ':'효',
+'びゃ':'뱌','びゅ':'뷰','びょ':'뵤','ぴゃ':'퍄','ぴゅ':'퓨','ぴょ':'표',
+'みゃ':'먀','みゅ':'뮤','みょ':'묘','りゃ':'랴','りゅ':'류','りょ':'료',
+'ふぁ':'파','ふぃ':'피','ふぇ':'페','ふぉ':'포','てぃ':'티','でぃ':'디','うぃ':'위'};
+const KANA={'あ':'아','い':'이','う':'우','え':'에','お':'오',
+'か':'카','き':'키','く':'쿠','け':'케','こ':'코','が':'가','ぎ':'기','ぐ':'구','げ':'게','ご':'고',
+'さ':'사','し':'시','す':'스','せ':'세','そ':'소','ざ':'자','じ':'지','ず':'즈','ぜ':'제','ぞ':'조',
+'た':'타','ち':'치','つ':'츠','て':'테','と':'토','だ':'다','ぢ':'지','づ':'즈','で':'데','ど':'도',
+'な':'나','に':'니','ぬ':'누','ね':'네','の':'노',
+'は':'하','ひ':'히','ふ':'후','へ':'헤','ほ':'호','ば':'바','び':'비','ぶ':'부','べ':'베','ぼ':'보',
+'ぱ':'파','ぴ':'피','ぷ':'푸','ぺ':'페','ぽ':'포',
+'ま':'마','み':'미','む':'무','め':'메','も':'모','や':'야','ゆ':'유','よ':'요',
+'ら':'라','り':'리','る':'루','れ':'레','ろ':'로','わ':'와','を':'오'};
+const VOW={};
+[['a','あかがさざただなはばぱまやらわ'],['i','いきぎしじちぢにひびぴみり'],
+ ['u','うくぐすずつづぬふぶぷむゆる'],['e','えけげせぜてでねへべぺめれ'],
+ ['o','おこごそぞとどのほぼぽもよろを']].forEach(([v,s])=>s.split('').forEach(c=>VOW[c]=v));
+const SMALL={'ゃ':'a','ゅ':'u','ょ':'o','ぁ':'a','ぃ':'i','ぅ':'u','ぇ':'e','ぉ':'o'};
+const JG={g:1,n:4,m:16,b:17,s:19,ng:21};
+function addJong(sy,j){const c=sy.charCodeAt(0)-0xAC00;
+  return (c<0||c>11171||c%28!==0)?sy:String.fromCharCode(0xAC00+c+j);}
+function toHangul(src){
+  if(!src) return '';
+  const k=src.replace(/[\u30A1-\u30F6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+  const out=[]; let i=0,pv=null;
+  while(i<k.length){
+    const two=k.slice(i,i+2), c=k[i];
+    if(YOUON[two]){out.push(YOUON[two]);pv=SMALL[two[1]]||null;i+=2;continue;}
+    if(c==='っ'){const n=k[i+1]||''; let j=JG.s;
+      if(n&&'かきくけこがぎぐげご'.includes(n))j=JG.g;
+      else if(n&&'ぱぴぷぺぽばびぶべぼ'.includes(n))j=JG.b;
+      if(out.length)out[out.length-1]=addJong(out[out.length-1],j);
+      i++;continue;}
+    if(c==='ん'){const n=k[i+1]||''; let j=JG.n;
+      if(n&&'まみむめもばびぶべぼぱぴぷぺぽ'.includes(n))j=JG.m;
+      else if(n&&'かきくけこがぎぐげご'.includes(n))j=JG.ng;
+      if(out.length)out[out.length-1]=addJong(out[out.length-1],j); else out.push('은');
+      pv=null;i++;continue;}
+    if(c==='ー'){out.push('-');i++;continue;}
+    if((c==='う'&&(pv==='o'||pv==='u'))||(c==='い'&&(pv==='e'||pv==='i'))||
+       (c==='あ'&&pv==='a')||(c==='お'&&pv==='o')||(c==='え'&&pv==='e')){out.push('-');i++;continue;}
+    if(KANA[c]){out.push(KANA[c]);pv=VOW[c]||null;i++;continue;}
+    out.push(c);pv=null;i++;
+  }
+  return out.join('');
+}
+
 /* ============================ 데이터 ============================ */
-const SEED_RAW = [
+const SEED_RAW=[
 ["相変わらず","あいかわらず","여전히, 변함없이","相変わらず忙しそうだね。","여전히 바빠 보이네.","N3","일반"],
 ["目立つ","めだつ","눈에 띄다","あの看板はよく目立つ。","저 간판은 눈에 잘 띈다.","N3","일반"],
 ["遠慮","えんりょ","사양함, 조심함","遠慮なく食べてください。","사양 말고 드세요.","N3","일반"],
@@ -248,157 +325,169 @@ const SEED_RAW = [
 ["賞味期限","しょうみきげん","품질유지기한","賞味期限を確認してください。","유통기한을 확인해 주세요.","N2","가게"],
 ["納品","のうひん","납품","明日の朝に納品される。","내일 아침에 납품된다.","N1","가게"],
 ["対応","たいおう","대응, 응대","外国のお客様に英語で対応する。","외국인 손님에게 영어로 응대한다.","N2","가게"],
-["割引","わりびき","할인","学生は割引がある。","학생은 할인이 있다.","N3","가게"]
-];
-const fresh = () => SEED_RAW.map((r,i)=>({
-  id:'s'+i, word:r[0], reading:r[1], meaning:r[2], example:r[3], exampleKo:r[4],
-  level:r[5], tag:r[6], state:'new', step:0, ease:2.5, interval:0, due:0, reps:0, lapses:0
-}));
+["割引","わりびき","할인","学生は割引がある。","학생은 할인이 있다.","N3","가게"]];
+const fresh=()=>SEED_RAW.map((r,i)=>({id:'s'+i,word:r[0],reading:r[1],meaning:r[2],
+  example:r[3],exampleKo:r[4],level:r[5],tag:r[6],
+  state:'new',interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false}));
 
-/* ============================ 알고리즘 ============================ */
-const MIN=60000, DAY=86400000, STEPS=[1,10], NEW_PER_DAY=10, KEY='jp-srs-v1';
+/* ============================ 상태 ============================ */
+const DAY=86400000, KEY='jp-srs-v1';
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-
-function nextCard(c0, rating, now){
-  const c={...c0};
-  const learning = c.state==='new'||c.state==='learning'||c.state==='relearning';
-  if(learning){
-    if(rating===0){ c.step=0; c.state=c.state==='relearning'?'relearning':'learning'; c.due=now+STEPS[0]*MIN; }
-    else if(rating===1){ c.state=c.state==='relearning'?'relearning':'learning';
-      c.due=now+STEPS[Math.min(c.step,STEPS.length-1)]*MIN; }
-    else if(rating===2){
-      const s=c.step+1;
-      if(s>=STEPS.length){ c.state='review'; c.step=0;
-        c.interval=c.lapses>0?Math.max(1,Math.round(c.interval*0.6)):1; c.due=now+c.interval*DAY; }
-      else { c.step=s; c.state=c.state==='relearning'?'relearning':'learning'; c.due=now+STEPS[s]*MIN; }
-    } else { c.state='review'; c.step=0; c.interval=4; c.due=now+4*DAY; }
-  } else {
-    if(rating===0){
-      c.lapses++; c.ease=clamp(c.ease-0.2,1.3,3.0); c.state='relearning'; c.step=0;
-      c.interval=Math.max(1,Math.round(c.interval*0.4)); c.due=now+STEPS[0]*MIN;
-    } else {
-      const mult = rating===1?1.2 : rating===2?c.ease : c.ease*1.3;
-      const d = rating===1?-0.15 : rating===3?0.15 : 0;
-      c.ease=clamp(c.ease+d,1.3,3.0);
-      c.interval=Math.max(1,Math.round(Math.max(c.interval,1)*mult));
-      c.due=now+c.interval*DAY;
-    }
-  }
-  c.reps++; return c;
-}
-function preview(c,r,now){
-  const ms=nextCard(c,r,now).due-now;
-  if(ms<45*MIN) return Math.round(ms/MIN)+'분';
-  if(ms<DAY) return Math.round(ms/(60*MIN))+'시간';
-  const d=Math.round(ms/DAY);
-  if(d<31) return d+'일';
-  if(d<365) return (d/30).toFixed(d/30<10?1:0)+'개월';
-  return (d/365).toFixed(1)+'년';
-}
-
-/* ============================ 저장 ============================ */
 let mem=null;
-function store(v){
-  try{ if(v===undefined) return localStorage.getItem(KEY); localStorage.setItem(KEY,v); return v; }
-  catch(e){ if(v===undefined) return mem; mem=v; return v; }
-}
-if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+function store(v){try{if(v===undefined)return localStorage.getItem(KEY);
+  localStorage.setItem(KEY,v);return v;}catch(e){if(v===undefined)return mem;mem=v;return v;}}
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 
-let S = (()=>{ try{ const d=JSON.parse(store()); if(d&&d.cards) return d; }catch(e){}
-  return {cards:fresh(), offset:0, introDay:'', introCount:0}; })();
+const DEF={cards:null,queue:null,queueDay:'',introDay:'',introCount:0,
+  offset:0,hangul:true,newPerDay:10};
+let S=(()=>{
+  let d=null; try{d=JSON.parse(store());}catch(e){}
+  if(!d||!Array.isArray(d.cards)) d={};
+  const s={...DEF,...d};
+  if(!Array.isArray(s.cards)||!s.cards.length) s.cards=fresh();
+  s.cards=s.cards.map(c=>({interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false,...c,
+    state:(c.state==='relearning')?'learning':(c.state||'new')}));
+  if(!Array.isArray(s.queue)) s.queue=null;
+  return s;
+})();
 let session={done:0,again:0}, revealed=false, view='study';
 const persist=()=>store(JSON.stringify(S));
 const now=()=>Date.now()+S.offset;
 const dayKey=t=>new Date(t).toISOString().slice(0,10);
+const card=id=>S.cards.find(c=>c.id===id);
 
-/* ============================ 큐 ============================ */
-function introducedToday(){ return S.introDay===dayKey(now())?S.introCount:0; }
-function queue(){
-  const t=now();
-  const lrn=S.cards.filter(c=>(c.state==='learning'||c.state==='relearning')&&c.due<=t);
-  const rev=S.cards.filter(c=>c.state==='review'&&c.due<=t).sort((a,b)=>a.due-b.due);
-  const nw=S.cards.filter(c=>c.state==='new').slice(0,Math.max(0,NEW_PER_DAY-introducedToday()));
-  return [...lrn,...rev,...nw];
+function ensureQueue(){
+  const today=dayKey(now());
+  if(S.queueDay!==today){ S.queueDay=today; S.introDay=today; S.introCount=0; S.queue=null; }
+  if(!Array.isArray(S.queue)) S.queue=[];
+  S.queue=S.queue.filter(id=>card(id));
+  if(!S.queue.length){
+    const t=now();
+    const learn=S.cards.filter(c=>c.state==='learning').map(c=>c.id);
+    const rev=S.cards.filter(c=>c.state==='review'&&c.due<=t).sort((a,b)=>a.due-b.due).map(c=>c.id);
+    const room=Math.max(0,S.newPerDay-S.introCount);
+    const nw=S.cards.filter(c=>c.state==='new').slice(0,room);
+    S.introCount+=nw.length;
+    S.queue=[...learn,...rev,...nw.map(c=>c.id)];
+  }
+  return S.queue;
+}
+
+/* 짧은 간격은 장 수로, 긴 간격은 날짜로 */
+const BACK={0:3,1:8};
+function gapLabel(n,rest){ return rest<=0?'바로 다시':Math.min(n,rest+1)+'장 뒤'; }
+function preview(c,g,rest){
+  if(c.state==='new'||c.state==='learning'){
+    if(g<2) return gapLabel(BACK[g],rest);
+    return (c.missed?1:2)+'일 뒤';
+  }
+  if(g===0) return gapLabel(BACK[0],rest);
+  if(g===1) return Math.max(1,Math.round(c.interval*1.2))+'일 뒤';
+  return Math.max(2,Math.round(c.interval*c.ease))+'일 뒤';
+}
+
+function grade(g){
+  const q=ensureQueue(); if(!q.length) return;
+  const c=card(q[0]), t=now();
+  q.shift();
+  const back=i=>q.splice(Math.min(i,q.length),0,c.id);
+  if(c.state==='new'||c.state==='learning'){
+    c.state='learning';
+    if(g===0){ c.missed=true; back(BACK[0]); }
+    else if(g===1){ back(BACK[1]); }
+    else { c.state='review'; c.interval=c.missed?1:2; c.due=t+c.interval*DAY; c.missed=false; }
+  } else {
+    if(g===0){ c.lapses++; c.ease=clamp(c.ease-0.2,1.3,3.0);
+      c.state='learning'; c.missed=true; c.interval=1; back(BACK[0]); }
+    else if(g===1){ c.ease=clamp(c.ease-0.15,1.3,3.0);
+      c.interval=Math.max(1,Math.round(c.interval*1.2)); c.due=t+c.interval*DAY; }
+    else { c.interval=Math.max(2,Math.round(c.interval*c.ease)); c.due=t+c.interval*DAY; }
+  }
+  c.reps++; session.done++; if(g===0) session.again++;
+  revealed=false; persist(); render();
+}
+
+/* ============================ 음성 ============================ */
+let jaVoice=null;
+function pickVoice(){
+  if(!window.speechSynthesis) return;
+  const vs=speechSynthesis.getVoices().filter(v=>(v.lang||'').replace('_','-').toLowerCase().startsWith('ja'));
+  if(!vs.length) return;
+  jaVoice=vs.find(v=>/kyoko|otoya|o-?ren|hattori/i.test(v.name))||vs.find(v=>v.localService)||vs[0];
+}
+if(window.speechSynthesis){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
+function say(text){
+  if(!window.speechSynthesis||!text) return;
+  if(!jaVoice) pickVoice();
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='ja-JP'; u.rate=0.85; u.pitch=1;
+  if(jaVoice) u.voice=jaVoice;
+  setTimeout(()=>{ try{ speechSynthesis.speak(u); }catch(e){} },40);
 }
 
 /* ============================ 화면 ============================ */
 const $=id=>document.getElementById(id);
 const views={study:$('viewStudy'),done:$('viewDone'),add:$('viewAdd'),panel:$('viewPanel')};
-
 function show(v){
   view=v;
   Object.entries(views).forEach(([k,el])=>el.classList.toggle('hide',k!==v));
-  if(v==='study'||v==='done') views.study.style.display = v==='study'?'flex':'none';
-  $('tabAdd').classList.toggle('on',v==='add');
-  $('tabPanel').classList.toggle('on',v==='panel');
   if(v==='panel') renderPanel();
   render();
 }
-
 function render(){
-  const q=queue();
+  const q=ensureQueue();
   $('dueCount').textContent=q.length+' DUE';
-  if(view!=='study'&&view!=='done') return;
-  if(!q.length){ if(view!=='done'){ views.study.style.display='none'; views.done.classList.remove('hide'); view='done'; }
+  if(view!=='study'&&view!=='done') { persist(); return; }
+  if(!q.length){
+    views.study.classList.add('hide'); views.done.classList.remove('hide'); view='done';
     const nx=S.cards.filter(c=>c.due>now()).sort((a,b)=>a.due-b.due)[0];
     const w=nx?nx.due-now():null;
-    const lbl = w==null?'—' : w<60*MIN?Math.max(1,Math.round(w/MIN))+'분 뒤'
-      : w<DAY?Math.round(w/(60*MIN))+'시간 뒤' : Math.round(w/DAY)+'일 뒤';
-    $('doneStat').innerHTML=`${session.done}장 채점 · 다시 ${session.again}장<br>다음 카드 ${lbl}`;
-    return;
+    const lbl=w==null?'—':w<DAY?'오늘 안':Math.round(w/DAY)+'일 뒤';
+    $('doneStat').innerHTML=`${session.done}장 채점 · 모름 ${session.again}장<br>다음 복습 ${lbl}`;
+    persist(); return;
   }
-  if(view==='done'){ views.done.classList.add('hide'); views.study.style.display='flex'; view='study'; }
+  views.done.classList.add('hide'); views.study.classList.remove('hide'); view='study';
 
-  const c=q[0], t=now();
-  const lrn=q.filter(x=>x.state==='learning'||x.state==='relearning').length;
-  const rev=q.filter(x=>x.state==='review').length;
-  const nw=q.filter(x=>x.state==='new').length;
-  $('cLearn').textContent=lrn; $('cReview').textContent=rev; $('cNew').textContent=nw;
+  const c=card(q[0]), rest=q.length-1;
+  $('cLearn').textContent=q.filter(i=>card(i).state==='learning').length;
+  $('cReview').textContent=q.filter(i=>card(i).state==='review').length;
+  $('cNew').textContent=q.filter(i=>card(i).state==='new').length;
 
   const total=q.length+session.done, n=Math.min(total,24);
   const filled=Math.round(session.done/Math.max(total,1)*n);
   $('cells').innerHTML=Array.from({length:n},(_,i)=>`<i class="${i<filled?'on':''}"></i>`).join('');
 
   $('word').textContent=c.word;
-  $('word').style.fontSize=(c.word.length>4?34:c.word.length>2?44:60)+'px';
+  $('word').style.fontSize=(c.word.length>4?32:c.word.length>2?42:56)+'px';
   $('cardMeta').textContent=c.tag+' · '+c.level;
   $('reading').textContent=c.reading;
+  $('hangul').textContent=S.hangul?toHangul(c.reading):'';
+  $('hangul').classList.toggle('hide',!S.hangul||!c.reading);
   $('meaning').textContent=c.meaning;
   $('example').textContent=c.example;
+  $('example').classList.toggle('hide',!c.example);
   $('exampleKo').textContent=c.exampleKo;
+  $('saySent').classList.toggle('hide',!c.example);
+  $('skip').classList.toggle('hide',q.length<2);
 
   $('answer').classList.toggle('hide',!revealed);
   $('reveal').classList.toggle('hide',revealed);
-  $('rateBar').classList.toggle('hide',!revealed);
-  if(revealed){
-    $('rateBar').innerHTML=['다시','어려움','보통','쉬움'].map((l,i)=>
-      `<button data-r="${i}"><b class="${i===0?'again':''}">${l}</b><s>${preview(c,i,t)}</s></button>`).join('');
-  }
+  $('grades').classList.toggle('hide',!revealed);
+  if(revealed) [...$('grades').children].forEach(b=>{
+    b.querySelector('s').textContent=preview(c,+b.dataset.g,rest);
+  });
+  persist();
 }
 
-/* ============================ 동작 ============================ */
-$('reveal').onclick=()=>{ revealed=true; render(); };
-$('rateBar').onclick=e=>{
-  const b=e.target.closest('[data-r]'); if(!b) return;
-  const r=+b.dataset.r, q=queue(); if(!q.length) return;
-  const c=q[0], wasNew=c.state==='new', up=nextCard(c,r,now());
-  S.cards=S.cards.map(x=>x.id===c.id?up:x);
-  if(wasNew){ S.introDay=dayKey(now()); S.introCount=introducedToday()+1; }
-  session.done++; if(r===0) session.again++;
-  revealed=false; persist(); render();
-};
-
-/* 일본어 음성 — iOS 내장 TTS */
-$('speak').onclick=()=>{
-  const q=queue(); if(!q.length||!window.speechSynthesis) return;
-  const u=new SpeechSynthesisUtterance(q[0].example||q[0].word);
-  u.lang='ja-JP'; u.rate=0.9;
-  const v=speechSynthesis.getVoices().find(x=>x.lang&&x.lang.replace('_','-').startsWith('ja'));
-  if(v) u.voice=v;
-  speechSynthesis.cancel(); speechSynthesis.speak(u);
-};
-
-$('skipDay').onclick=()=>{ S.offset+=DAY; persist(); render(); };
+/* 동작 */
+$('reveal').onclick=()=>{revealed=true;render();};
+$('grades').onclick=e=>{const b=e.target.closest('[data-g]'); if(b) grade(+b.dataset.g);};
+$('skip').onclick=()=>{const q=ensureQueue(); if(q.length<2)return;
+  q.push(q.shift()); revealed=false; persist(); render();};
+$('sayWord').onclick=()=>{const q=ensureQueue(); if(q.length) say(card(q[0]).word);};
+$('saySent').onclick=()=>{const q=ensureQueue(); if(q.length) say(card(q[0]).example||card(q[0]).word);};
+$('skipDay').onclick=()=>{S.offset+=DAY;persist();render();};
 $('tabAdd').onclick=()=>show(view==='add'?'study':'add');
 $('tabPanel').onclick=()=>show(view==='panel'?'study':'panel');
 $('addCancel').onclick=()=>show('study');
@@ -408,64 +497,68 @@ $('panelClose').onclick=()=>show('study');
 let tag='일반';
 $('tagChips').innerHTML=['일반','라이브','가게'].map(t=>
   `<button data-t="${t}" class="${t===tag?'on':''}">${t}</button>`).join('');
-$('tagChips').onclick=e=>{ const b=e.target.closest('[data-t]'); if(!b) return;
-  tag=b.dataset.t; [...$('tagChips').children].forEach(x=>x.classList.toggle('on',x.dataset.t===tag)); };
-const inputs=['fWord','fReading','fMeaning','fExample','fExampleKo'].map($);
-inputs.forEach(i=>i.oninput=()=>{ $('addSave').disabled=!($('fWord').value.trim()&&$('fMeaning').value.trim()); });
+$('tagChips').onclick=e=>{const b=e.target.closest('[data-t]'); if(!b)return; tag=b.dataset.t;
+  [...$('tagChips').children].forEach(x=>x.classList.toggle('on',x.dataset.t===tag));};
+const fields=['fWord','fReading','fMeaning','fExample','fExampleKo'];
+fields.forEach(id=>$(id).oninput=()=>{
+  $('addSave').disabled=!($('fWord').value.trim()&&$('fMeaning').value.trim());
+  $('readHint').textContent=$('fReading').value.trim()?toHangul($('fReading').value.trim()):'';
+});
 $('addSave').onclick=()=>{
-  S.cards.push({id:'u'+Date.now(), word:$('fWord').value.trim(), reading:$('fReading').value.trim(),
-    meaning:$('fMeaning').value.trim(), example:$('fExample').value.trim(),
-    exampleKo:$('fExampleKo').value.trim(), level:'추가', tag,
-    state:'new', step:0, ease:2.5, interval:0, due:0, reps:0, lapses:0});
-  inputs.forEach(i=>i.value=''); $('addSave').disabled=true; persist(); show('study');
+  S.cards.push({id:'u'+Date.now(),word:$('fWord').value.trim(),reading:$('fReading').value.trim(),
+    meaning:$('fMeaning').value.trim(),example:$('fExample').value.trim(),
+    exampleKo:$('fExampleKo').value.trim(),level:'추가',tag,
+    state:'new',interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false});
+  fields.forEach(id=>$(id).value=''); $('readHint').textContent='';
+  $('addSave').disabled=true; persist(); show('study');
 };
 
 /* 기록 */
 function renderPanel(){
   const c=S.cards;
-  const rows=[['전체 카드',c.length],
+  const seen=c.filter(x=>x.reps>0);
+  $('stats').innerHTML=[['전체 카드',c.length],
     ['미학습',c.filter(x=>x.state==='new').length],
-    ['학습 중',c.filter(x=>x.state==='learning'||x.state==='relearning').length],
+    ['학습 중',c.filter(x=>x.state==='learning').length],
     ['복습 단계',c.filter(x=>x.state==='review').length],
     ['장기 기억 (21일+)',c.filter(x=>x.interval>=21).length],
-    ['평균 난이도 계수',(c.filter(x=>x.reps>0).reduce((a,x)=>a+x.ease,0)/Math.max(1,c.filter(x=>x.reps>0).length)||2.5).toFixed(2)]];
-  $('stats').innerHTML=rows.map(([k,v])=>`<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
+    ['평균 난이도 계수',(seen.reduce((a,x)=>a+x.ease,0)/Math.max(1,seen.length)||2.5).toFixed(2)]]
+    .map(([k,v])=>`<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
+  [...$('segHangul').children].forEach(b=>b.classList.toggle('on',(b.dataset.h==='1')===!!S.hangul));
+  [...$('segNew').children].forEach(b=>b.classList.toggle('on',+b.dataset.n===S.newPerDay));
   $('offsetLabel').innerHTML=`며칠 뒤 카드가 어떻게 돌아오는지 기다리지 않고 보려면 시간을 밀어봐.<br>현재 ${S.offset===0?'실제 시각':'+'+Math.round(S.offset/DAY)+'일'} · ${dayKey(now())}`;
 }
-$('skipTools').onclick=e=>{
-  const b=e.target.closest('[data-skip]'); if(!b) return;
-  const d=+b.dataset.skip; S.offset = d===0?0:S.offset+d*DAY; persist(); renderPanel(); render();
-};
-$('doReset').onclick=()=>{ if(!confirm('학습 기록을 전부 지울까?')) return;
-  S={cards:fresh(),offset:0,introDay:'',introCount:0}; session={done:0,again:0};
-  revealed=false; persist(); show('study'); };
+$('segHangul').onclick=e=>{const b=e.target.closest('[data-h]'); if(!b)return;
+  S.hangul=b.dataset.h==='1'; persist(); renderPanel();};
+$('segNew').onclick=e=>{const b=e.target.closest('[data-n]'); if(!b)return;
+  S.newPerDay=+b.dataset.n; persist(); renderPanel();};
+$('skipTools').onclick=e=>{const b=e.target.closest('[data-skip]'); if(!b)return;
+  const d=+b.dataset.skip; S.offset=d===0?0:S.offset+d*DAY; persist(); renderPanel(); render();};
+$('doReset').onclick=()=>{if(!confirm('학습 기록을 전부 지울까?'))return;
+  S={...DEF,cards:fresh()}; session={done:0,again:0}; revealed=false; persist(); show('study');};
 $('doExport').onclick=()=>{
-  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download=`일본어-백업-${dayKey(Date.now())}.json`;
-  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-};
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));
+  a.download=`일본어-백업-${dayKey(Date.now())}.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
 $('doImport').onclick=()=>$('fileIn').click();
-$('fileIn').onchange=e=>{
-  const f=e.target.files[0]; if(!f) return;
+$('fileIn').onchange=e=>{const f=e.target.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{ try{ const d=JSON.parse(r.result);
-    if(!d.cards) throw 0; S=d; persist(); renderPanel(); render(); alert('불러왔어.'); }
-    catch(err){ alert('파일을 읽지 못했어.'); } };
-  r.readAsText(f); e.target.value='';
-};
+  r.onload=()=>{try{const d=JSON.parse(r.result); if(!Array.isArray(d.cards))throw 0;
+    S={...DEF,...d}; persist(); renderPanel(); render(); alert('불러왔어.');}
+    catch(err){alert('파일을 읽지 못했어.');}};
+  r.readAsText(f); e.target.value='';};
 
-/* 키보드 (데스크톱 확인용) */
+/* 키보드 (컴퓨터 확인용) */
 addEventListener('keydown',e=>{
-  if(view!=='study') return;
-  if(e.key===' '||e.key==='Enter'){ e.preventDefault(); revealed=true; render(); }
-  else if(revealed&&['1','2','3','4'].includes(e.key)){
-    e.preventDefault(); const b=$('rateBar').querySelector(`[data-r="${+e.key-1}"]`); if(b) b.click();
-  }
+  if(view!=='study')return;
+  if(e.key===' '||e.key==='Enter'){e.preventDefault(); if(!revealed){revealed=true;render();}}
+  else if(e.key==='s'||e.key==='S'){e.preventDefault(); $('skip').click();}
+  else if(revealed&&['1','2','3'].includes(e.key)){e.preventDefault(); grade(+e.key-1);}
 });
 
-if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-if(window.speechSynthesis) speechSynthesis.getVoices();
+if('serviceWorker' in navigator)
+  addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 show('study');
 </script>
 </body>
