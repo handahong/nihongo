@@ -65,6 +65,11 @@
   .meta{position:absolute;top:-1px;left:-1px;font-family:var(--mono);font-size:9px;
     color:var(--rule);background:var(--paper);padding:2px 5px;letter-spacing:.08em}
 
+  .strip{width:100%;max-width:330px;border:1.5px solid var(--rule);background:var(--paper);
+    position:relative;padding:26px 20px;flex:none;display:flex;align-items:center;justify-content:center}
+  #phrase{font-family:var(--jp);font-size:21px;line-height:1.85;color:var(--ink);
+    text-align:center;letter-spacing:.02em;word-break:keep-all}
+  .note{font-size:11.5px;color:var(--rule);margin-top:6px}
   #answer{text-align:center;width:100%}
   .reading{font-family:var(--jp);font-size:20px;color:var(--rule);letter-spacing:.1em}
   .hangul{font-size:14px;color:var(--muted);margin-top:3px;letter-spacing:.02em}
@@ -155,11 +160,13 @@
     </div>
 
     <div class="stage">
-      <div class="genko"><span class="meta" id="cardMeta"></span><span id="word"></span></div>
+      <div class="genko" id="genko"><span class="meta" id="cardMeta"></span><span id="word"></span></div>
+      <div class="strip hide" id="strip"><span class="meta" id="cardMeta2"></span><span id="phrase"></span></div>
       <div id="answer" class="hide fade">
         <div class="reading" id="reading"></div>
         <div class="hangul" id="hangul"></div>
         <div class="meaning" id="meaning"></div>
+        <div class="note" id="note"></div>
         <div class="ex" id="example"></div>
         <div class="exko" id="exampleKo"></div>
         <div class="sound">
@@ -215,6 +222,10 @@
           <button data-n="5">5</button><button data-n="10">10</button><button data-n="20">20</button></span></div>
     </div>
     <div class="box">
+      <h3>단어장</h3>
+      <div id="deckList"></div>
+    </div>
+    <div class="box">
       <h3>백업</h3>
       <p>저장 공간이 부족하거나 사파리 데이터를 지우면 기록이 날아갈 수 있어. 가끔 파일로 내보내 두면 안전해.</p>
       <div class="mini">
@@ -265,7 +276,7 @@ const SMALL={'ゃ':'a','ゅ':'u','ょ':'o','ぁ':'a','ぃ':'i','ぅ':'u','ぇ':'
 const JG={g:1,n:4,m:16,b:17,s:19,ng:21};
 function addJong(sy,j){const c=sy.charCodeAt(0)-0xAC00;
   return (c<0||c>11171||c%28!==0)?sy:String.fromCharCode(0xAC00+c+j);}
-function toHangul(src){
+function toHangul(src,lit){
   if(!src) return '';
   const k=src.replace(/[\u30A1-\u30F6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
   const out=[]; let i=0,pv=null;
@@ -283,52 +294,49 @@ function toHangul(src){
       if(out.length)out[out.length-1]=addJong(out[out.length-1],j); else out.push('은');
       pv=null;i++;continue;}
     if(c==='ー'){out.push('-');i++;continue;}
-    if((c==='う'&&(pv==='o'||pv==='u'))||(c==='い'&&(pv==='e'||pv==='i'))||
-       (c==='あ'&&pv==='a')||(c==='お'&&pv==='o')||(c==='え'&&pv==='e')){out.push('-');i++;continue;}
+    if(lit&&c==='は'&&i>0){out.push('와');pv=null;i++;continue;}
+    if(!lit&&((c==='う'&&(pv==='o'||pv==='u'))||(c==='い'&&(pv==='e'||pv==='i'))||
+       (c==='あ'&&pv==='a')||(c==='お'&&pv==='o')||(c==='え'&&pv==='e'))){out.push('-');i++;continue;}
     if(KANA[c]){out.push(KANA[c]);pv=VOW[c]||null;i++;continue;}
     out.push(c);pv=null;i++;
   }
   return out.join('');
 }
 
-/* ============================ 데이터 ============================ */
-const SEED_RAW=[
-["相変わらず","あいかわらず","여전히, 변함없이","相変わらず忙しそうだね。","여전히 바빠 보이네.","N3","일반"],
-["目立つ","めだつ","눈에 띄다","あの看板はよく目立つ。","저 간판은 눈에 잘 띈다.","N3","일반"],
-["遠慮","えんりょ","사양함, 조심함","遠慮なく食べてください。","사양 말고 드세요.","N3","일반"],
-["逆に","ぎゃくに","오히려, 반대로","説明が逆に分かりにくくなった。","설명이 오히려 이해하기 어려워졌다.","N3","일반"],
-["諦める","あきらめる","포기하다","途中で諦めたくない。","도중에 포기하고 싶지 않다.","N3","일반"],
-["迷う","まよう","망설이다, 헤매다","どっちを買うか迷っている。","어느 쪽을 살지 망설이고 있다.","N3","일반"],
-["支度","したく","채비, 준비","そろそろ出かける支度をしよう。","슬슬 나갈 채비를 하자.","N3","일반"],
-["一応","いちおう","일단, 우선","一応確認しておくね。","일단 확인해 둘게.","N3","일반"],
-["結局","けっきょく","결국","結局行かなかった。","결국 가지 않았다.","N3","일반"],
-["詳しい","くわしい","자세하다; 정통하다","彼はアニメに詳しい。","그는 애니메이션에 정통하다.","N3","일반"],
-["苦手","にがて","서투름, 질색임","人混みが苦手だ。","사람 많은 곳이 질색이다.","N3","일반"],
-["面倒","めんどう","성가심, 번거로움","手続きが面倒だ。","절차가 번거롭다.","N3","일반"],
-["懐かしい","なつかしい","그립다","この曲、懐かしいね。","이 곡, 그립네.","N3","일반"],
-["訪れる","おとずれる","방문하다; 찾아오다","毎年この街を訪れる。","매년 이 거리를 방문한다.","N2","일반"],
-["揃う","そろう","갖춰지다, 모이다","メンバーが全員揃った。","멤버가 전원 모였다.","N2","일반"],
-["通う","かよう","다니다","週に二回ジムに通う。","주 2회 헬스장에 다닌다.","N3","일반"],
-["発売","はつばい","발매","新しいアルバムが発売された。","새 앨범이 발매됐다.","N2","라이브"],
-["抽選","ちゅうせん","추첨","チケットは抽選で決まる。","티켓은 추첨으로 정해진다.","N1","라이브"],
-["特典","とくてん","특전","初回限定の特典が付く。","초회한정 특전이 붙는다.","N1","라이브"],
-["会場","かいじょう","행사장, 공연장","会場は駅から近い。","공연장은 역에서 가깝다.","N3","라이브"],
-["物販","ぶっぱん","굿즈 판매(부스)","物販の列がすごく長い。","굿즈 판매 줄이 엄청 길다.","—","라이브"],
-["開催","かいさい","개최","展示会は来月開催される。","전시회는 다음 달에 개최된다.","N2","라이브"],
-["混雑","こんざつ","혼잡","土日はかなり混雑する。","주말은 상당히 혼잡하다.","N2","라이브"],
-["盛り上がる","もりあがる","분위기가 달아오르다","会場がすごく盛り上がった。","공연장이 엄청 달아올랐다.","N2","라이브"],
-["感想","かんそう","감상, 소감","ライブの感想を書いた。","라이브 감상을 썼다.","N3","라이브"],
-["順番","じゅんばん","순서, 차례","順番に並んでください。","순서대로 줄 서 주세요.","N4","라이브"],
-["差し入れ","さしいれ","격려 선물(먹을 것 등)","スタッフに差し入れを渡した。","스태프에게 간식을 건넸다.","N1","라이브"],
-["在庫","ざいこ","재고","人気の商品は在庫が切れている。","인기 상품은 재고가 떨어졌다.","N2","가게"],
-["仕入れ","しいれ","매입, 사입","フランスからチーズを仕入れる。","프랑스에서 치즈를 매입한다.","N2","가게"],
-["賞味期限","しょうみきげん","품질유지기한","賞味期限を確認してください。","유통기한을 확인해 주세요.","N2","가게"],
-["納品","のうひん","납품","明日の朝に納品される。","내일 아침에 납품된다.","N1","가게"],
-["対応","たいおう","대응, 응대","外国のお客様に英語で対応する。","외국인 손님에게 영어로 응대한다.","N2","가게"],
-["割引","わりびき","할인","学生は割引がある。","학생은 할인이 있다.","N3","가게"]];
-const fresh=()=>SEED_RAW.map((r,i)=>({id:'s'+i,word:r[0],reading:r[1],meaning:r[2],
-  example:r[3],exampleKo:r[4],level:r[5],tag:r[6],
-  state:'new',interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false}));
+/* ======================= 단어장 (외부 파일) ======================= */
+const DECK_KEY='jp-srs-decks';
+let DECK_META=[];
+function statFields(){return {state:'new',interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false};}
+function mergeDeck(list){
+  const idx=new Map(S.cards.map(c=>[c.id,c]));
+  let added=0;
+  list.forEach(c=>{
+    const ex=idx.get(c.id);
+    if(ex){ const keep={state:ex.state,interval:ex.interval,ease:ex.ease,
+        due:ex.due,reps:ex.reps,lapses:ex.lapses,missed:ex.missed};
+      Object.assign(ex,c,keep); }
+    else { S.cards.push({...c,...statFields()}); added++; }
+  });
+  return added;
+}
+async function syncDecks(){
+  let meta=null;
+  try{ meta=await (await fetch('decks.json',{cache:'no-store'})).json(); }
+  catch(e){ try{ meta=JSON.parse(localStorage.getItem(DECK_KEY)); }catch(e2){} }
+  if(!meta||!Array.isArray(meta.decks)) return 0;
+  DECK_META=meta.decks;
+  try{ localStorage.setItem(DECK_KEY,JSON.stringify(meta)); }catch(e){}
+  let added=0;
+  for(const d of DECK_META){
+    if(S.decks[d.id]===undefined) S.decks[d.id]=true;
+    try{
+      const j=await (await fetch(d.file,{cache:'no-store'})).json();
+      if(Array.isArray(j.cards)) added+=mergeDeck(j.cards);
+    }catch(e){}
+  }
+  if(added) persist();
+  return added;
+}
 
 /* ============================ 상태 ============================ */
 const DAY=86400000, KEY='jp-srs-v1';
@@ -338,14 +346,15 @@ function store(v){try{if(v===undefined)return localStorage.getItem(KEY);
   localStorage.setItem(KEY,v);return v;}catch(e){if(v===undefined)return mem;mem=v;return v;}}
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 
-const DEF={cards:null,queue:null,queueDay:'',introDay:'',introCount:0,
-  offset:0,hangul:true,newPerDay:10};
+const DEF={cards:[],queue:null,queueDay:'',introDay:'',introCount:0,
+  offset:0,hangul:true,newPerDay:10,decks:{}};
 let S=(()=>{
   let d=null; try{d=JSON.parse(store());}catch(e){}
   if(!d||!Array.isArray(d.cards)) d={};
   const s={...DEF,...d};
-  if(!Array.isArray(s.cards)||!s.cards.length) s.cards=fresh();
-  s.cards=s.cards.map(c=>({interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false,...c,
+  if(!Array.isArray(s.cards)) s.cards=[];
+  if(!s.decks||typeof s.decks!=='object') s.decks={};
+  s.cards=s.cards.map(c=>({interval:0,ease:2.5,due:0,reps:0,lapses:0,missed:false,type:'word',deck:'mine',...c,
     state:(c.state==='relearning')?'learning':(c.state||'new')}));
   if(!Array.isArray(s.queue)) s.queue=null;
   return s;
@@ -355,20 +364,28 @@ const persist=()=>store(JSON.stringify(S));
 const now=()=>Date.now()+S.offset;
 const dayKey=t=>new Date(t).toISOString().slice(0,10);
 const card=id=>S.cards.find(c=>c.id===id);
+const on=c=>S.decks[c.deck]!==false;
 
 function ensureQueue(){
   const today=dayKey(now());
   if(S.queueDay!==today){ S.queueDay=today; S.introDay=today; S.introCount=0; S.queue=null; }
   if(!Array.isArray(S.queue)) S.queue=[];
-  S.queue=S.queue.filter(id=>card(id));
+  S.queue=S.queue.filter(id=>{const c=card(id);return c&&on(c);});
   if(!S.queue.length){
     const t=now();
-    const learn=S.cards.filter(c=>c.state==='learning').map(c=>c.id);
-    const rev=S.cards.filter(c=>c.state==='review'&&c.due<=t).sort((a,b)=>a.due-b.due).map(c=>c.id);
+    const learn=S.cards.filter(c=>c.state==='learning'&&on(c)).map(c=>c.id);
+    const rev=S.cards.filter(c=>c.state==='review'&&c.due<=t&&on(c)).sort((a,b)=>a.due-b.due).map(c=>c.id);
     const room=Math.max(0,S.newPerDay-S.introCount);
-    const nw=S.cards.filter(c=>c.state==='new').slice(0,room);
+    const pools={};
+    S.cards.filter(c=>c.state==='new'&&on(c)).forEach(c=>{(pools[c.deck||'mine']??=[]).push(c.id);});
+    const keys=Object.keys(pools), nw=[];
+    for(let k=0;nw.length<room;k++){
+      let moved=false;
+      for(const key of keys){ if(pools[key].length&&nw.length<room){nw.push(pools[key].shift());moved=true;} }
+      if(!moved) break;
+    }
     S.introCount+=nw.length;
-    S.queue=[...learn,...rev,...nw.map(c=>c.id)];
+    S.queue=[...learn,...rev,...nw];
   }
   return S.queue;
 }
@@ -458,11 +475,19 @@ function render(){
   const filled=Math.round(session.done/Math.max(total,1)*n);
   $('cells').innerHTML=Array.from({length:n},(_,i)=>`<i class="${i<filled?'on':''}"></i>`).join('');
 
-  $('word').textContent=c.word;
-  $('word').style.fontSize=(c.word.length>4?32:c.word.length>2?42:56)+'px';
-  $('cardMeta').textContent=c.tag+' · '+c.level;
+  const isP=c.type==='phrase';
+  $('genko').classList.toggle('hide',isP);
+  $('strip').classList.toggle('hide',!isP);
+  if(isP){ $('phrase').textContent=c.word;
+    $('phrase').style.fontSize=(c.word.length>18?17:c.word.length>12?19:21)+'px';
+    $('cardMeta2').textContent=c.tag+' · '+c.level; }
+  else { $('word').textContent=c.word;
+    $('word').style.fontSize=(c.word.length>4?32:c.word.length>2?42:56)+'px';
+    $('cardMeta').textContent=c.tag+' · '+c.level; }
+  $('note').textContent=c.note||'';
+  $('note').classList.toggle('hide',!c.note);
   $('reading').textContent=c.reading;
-  $('hangul').textContent=S.hangul?toHangul(c.reading):'';
+  $('hangul').textContent=S.hangul?(c.hangul||toHangul(c.reading,c.type==='phrase')):'';
   $('hangul').classList.toggle('hide',!S.hangul||!c.reading);
   $('meaning').textContent=c.meaning;
   $('example').textContent=c.example;
@@ -502,7 +527,8 @@ $('tagChips').onclick=e=>{const b=e.target.closest('[data-t]'); if(!b)return; ta
 const fields=['fWord','fReading','fMeaning','fExample','fExampleKo'];
 fields.forEach(id=>$(id).oninput=()=>{
   $('addSave').disabled=!($('fWord').value.trim()&&$('fMeaning').value.trim());
-  $('readHint').textContent=$('fReading').value.trim()?toHangul($('fReading').value.trim()):'';
+  const rv=$('fReading').value.trim();
+  $('readHint').textContent=rv?toHangul(rv,/[。、？]/.test($('fWord').value)||rv.length>10):'';
 });
 $('addSave').onclick=()=>{
   S.cards.push({id:'u'+Date.now(),word:$('fWord').value.trim(),reading:$('fReading').value.trim(),
@@ -524,10 +550,25 @@ function renderPanel(){
     ['장기 기억 (21일+)',c.filter(x=>x.interval>=21).length],
     ['평균 난이도 계수',(seen.reduce((a,x)=>a+x.ease,0)/Math.max(1,seen.length)||2.5).toFixed(2)]]
     .map(([k,v])=>`<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
+  $('deckList').innerHTML=DECK_META.map(d=>{
+    const n=S.cards.filter(c=>c.deck===d.id).length;
+    const done=S.cards.filter(c=>c.deck===d.id&&c.state!=='new').length;
+    return `<div class="row"><span>${d.name}<br><em style="font-style:normal;font-size:10.5px;color:var(--muted)">${done} / ${n}장 시작함</em></span>`+
+      `<span class="seg" data-deck="${d.id}"><button data-v="1">켬</button><button data-v="0">끔</button></span></div>`;
+  }).join('')||'<p style="margin:0">단어장을 불러오지 못했어. 인터넷에 한 번 연결해줘.</p>';
+  $('deckList').querySelectorAll('.seg').forEach(sg=>{
+    const idd=sg.dataset.deck;
+    [...sg.children].forEach(b=>b.classList.toggle('on',(b.dataset.v==='1')===(S.decks[idd]!==false)));
+  });
   [...$('segHangul').children].forEach(b=>b.classList.toggle('on',(b.dataset.h==='1')===!!S.hangul));
   [...$('segNew').children].forEach(b=>b.classList.toggle('on',+b.dataset.n===S.newPerDay));
   $('offsetLabel').innerHTML=`며칠 뒤 카드가 어떻게 돌아오는지 기다리지 않고 보려면 시간을 밀어봐.<br>현재 ${S.offset===0?'실제 시각':'+'+Math.round(S.offset/DAY)+'일'} · ${dayKey(now())}`;
 }
+$('deckList').onclick=e=>{const b=e.target.closest('[data-v]'); if(!b)return;
+  const idd=b.parentElement.dataset.deck;
+  S.decks[idd]=b.dataset.v==='1';
+  if(!Object.values(S.decks).some(v=>v!==false)){ S.decks[idd]=true; alert('단어장을 전부 끌 수는 없어.'); }
+  S.queue=null; persist(); renderPanel(); render();};
 $('segHangul').onclick=e=>{const b=e.target.closest('[data-h]'); if(!b)return;
   S.hangul=b.dataset.h==='1'; persist(); renderPanel();};
 $('segNew').onclick=e=>{const b=e.target.closest('[data-n]'); if(!b)return;
@@ -560,6 +601,8 @@ addEventListener('keydown',e=>{
 if('serviceWorker' in navigator)
   addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 show('study');
+syncDecks().then(n=>{ if(n){ S.queue=null; } persist(); if(view==='study'||view==='done') render();
+  if(view==='panel') renderPanel(); });
 </script>
 </body>
 </html>
