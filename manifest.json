@@ -1,15 +1,14 @@
 {
-  "name": "일본어 단어장",
-  "short_name": "語",
+  "name": "한다홍 일본어",
+  "short_name": "일본어",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#FBFAF7",
-  "theme_color": "#FBFAF7",
-  "lang": "ko",
+  "orientation": "any",
+  "background_color": "#eef0ea",
+  "theme_color": "#eef0ea",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
