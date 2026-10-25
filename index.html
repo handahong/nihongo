@@ -6,125 +6,158 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="일본어">
-<meta name="theme-color" content="#eef0ea">
+<meta name="theme-color" content="#e9e9ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
 <title>한다홍 일본어</title>
-<script>window.APP_V="2";</script>
+<script>window.APP_V="3";</script>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
-/* 아이패드 가로·세로 한 화면 앱. 위 제목줄, 가운데 내용, 아래 탭. 눈이 편한 연한 세이지 배경에 깊은 초록 강조, 읽기(가나)는 감색으로 구분. */
+/* 아이패드 기본 앱(설정·메모) 방식: 가로는 왼쪽 사이드바 + 오른쪽 내용, 세로·아이폰은 아래 탭.
+   글꼴은 기기 기본(SF·Apple SD 고딕·히라기노)을 그대로 써서 빠르고 애플답게. */
 :root{
-  --bg:#eef0ea; --surface:#ffffff; --surface-2:#e3e7df; --line:#d3d9cd;
-  --fg:#1e2a26; --muted:#66736c;
-  --accent:#2f6b5a; --accent-ink:#ffffff; --kana:#b86a2a; --warn:#b94a48; --ok:#2f6b5a;
-  --jp:"Noto Sans JP","Hiragino Sans","Apple SD Gothic Neo",sans-serif;
-  --kr:"Noto Sans KR","Apple SD Gothic Neo",sans-serif;
+  --bg:#f2f2f7; --side:#e9e9ee; --card:#ffffff; --fill:#e5e5ea; --fill2:#d9d9de;
+  --ink:#000000; --sec:#8a8a8e; --sep:#e0e0e4;
+  --blue:#007aff; --green:#34c759; --orange:#ff9500; --red:#ff3b30; --purple:#5856d6; --gray:#8e8e93;
+  --shadow:0 1px 2px rgba(0,0,0,.05);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Apple SD Gothic Neo","Hiragino Sans","Noto Sans CJK KR","Noto Sans CJK JP",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#141a18; --surface:#1d2622; --surface-2:#273330; --line:#34423d;
-  --fg:#e6ebe8; --muted:#94a39b; --accent:#6fbf9f; --accent-ink:#0f1f19; --kana:#e8a765; --warn:#e07a78; --ok:#6fbf9f; color-scheme:dark; } }
-*{box-sizing:border-box} html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--fg);font:17px/1.5 var(--kr);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  --bg:#000000; --side:#1c1c1e; --card:#1c1c1e; --fill:#2c2c2e; --fill2:#3a3a3c;
+  --ink:#ffffff; --sec:#98989f; --sep:#38383a;
+  --blue:#0a84ff; --green:#30d158; --orange:#ff9f0a; --red:#ff453a; --purple:#5e5ce6; --gray:#8e8e93;
+  --shadow:none; color-scheme:dark; } }
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:17px/1.45 var(--font);display:flex;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-font-smoothing:antialiased;letter-spacing:-.1px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;letter-spacing:inherit;text-align:inherit}
+select{font:inherit}
 [hidden]{display:none!important}
-.jp{font-family:var(--jp);font-feature-settings:"palt"}
-.pad{padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.jp{font-feature-settings:"palt"}
 
-header{display:flex;align-items:center;gap:12px;padding-block:14px;border-bottom:1px solid var(--line)}
-header h1{font-size:19px;font-weight:700;margin:0;letter-spacing:-.2px}
-header .sub{color:var(--muted);font-size:14px}
-header .right{margin-left:auto;display:flex;gap:8px;align-items:center}
-.pill{padding:6px 12px;border-radius:999px;background:var(--surface-2);font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
-.pill b{color:var(--fg);font-weight:600}
+/* ---- 사이드바 ---- */
+aside{width:290px;flex:none;background:var(--side);display:flex;flex-direction:column;padding:calc(18px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));overflow-y:auto}
+aside h1{font-size:32px;font-weight:700;margin:14px 10px 16px;letter-spacing:-.5px}
+.sec{font-size:13px;color:var(--sec);font-weight:600;margin:16px 10px 6px}
+.srow{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:9px;font-size:17px;width:100%;color:var(--ink)}
+.srow[aria-current="true"]{background:var(--card);box-shadow:var(--shadow)}
+.srow .ic{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:#fff;flex:none}
+.srow .ic svg{width:17px;height:17px}
+.srow .n{margin-left:auto;color:var(--sec);font-size:16px;font-variant-numeric:tabular-nums}
+.srow .ck{margin-left:auto;color:var(--blue);font-weight:600;width:22px;text-align:center}
+.srow.dim{color:var(--sec)}
+aside .spacer{flex:1}
 
-main{flex:1;min-height:0;overflow-y:auto;padding-block:18px;display:flex;flex-direction:column;gap:16px;max-width:860px;width:100%;margin:0 auto}
-nav{display:flex;border-top:1px solid var(--line);background:var(--surface);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav button{flex:1;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:12px}
-nav button svg{width:24px;height:24px}
-nav button[aria-selected="true"]{color:var(--accent);font-weight:600}
+/* ---- 본문 ---- */
+main{flex:1;min-width:0;display:flex;flex-direction:column;overflow-y:auto;padding:calc(22px + env(safe-area-inset-top,0px)) max(28px,env(safe-area-inset-right,0px)) 28px 28px}
+.hdr{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-height:44px}
+.hdr h2{font-size:34px;font-weight:700;letter-spacing:-.6px;margin:0}
+.hdr .sub{color:var(--sec);font-size:17px}
+.hdr .right{margin-left:auto;align-self:center}
+.seg{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px}
+.seg button{padding:6px 13px;border-radius:7px;font-size:14px;font-weight:500;color:var(--sec)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.content{display:flex;flex-direction:column;gap:14px;margin-top:18px;max-width:980px;width:100%}
+.content.fill{flex:1;min-height:0}
+.ans{background:var(--card);border-radius:20px;padding:14px 22px;box-shadow:var(--shadow)}
+.ans .main{font-size:clamp(26px,3.6vw,40px);font-weight:600;line-height:1.3;letter-spacing:-.3px}
+.ans .kana{font-size:clamp(15px,1.8vw,19px);color:var(--sec);margin-top:4px}
+.ans .ko{font-size:clamp(18px,2.2vw,24px);margin-top:10px}
+.ans .note{font-size:15px;color:var(--sec);margin-top:4px;line-height:1.5}
+.ans.quiz{display:flex;align-items:center;gap:14px;min-height:76px}
+.ans.quiz .q{font-size:20px;font-weight:600}
+.ans.quiz .w{color:var(--sec);font-size:15px}
 
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
-.card h2{font-size:15px;color:var(--muted);font-weight:600;margin:0 0 10px;letter-spacing:.02em}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.grow{flex:1}
-.btn{padding:12px 18px;border-radius:12px;background:var(--surface-2);font-size:16px;font-weight:500;display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:48px}
-.btn.primary{background:var(--accent);color:var(--accent-ink)}
-.btn.big{font-size:18px;padding:16px 22px;min-height:58px}
+.card{background:var(--card);border-radius:20px;padding:22px 24px;box-shadow:var(--shadow)}
+.card h3{font-size:13px;color:var(--sec);font-weight:600;margin:0 0 8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:16px 20px;border-radius:14px;background:var(--fill);color:var(--blue);font-size:19px;font-weight:600;min-height:56px}
+.btn.fill{background:var(--blue);color:#fff}
 .btn:disabled{opacity:.4}
-.btn svg{width:20px;height:20px}
-.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.stat div{background:var(--surface-2);border-radius:12px;padding:12px 14px}
-.stat b{display:block;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
-.stat span{font-size:13px;color:var(--muted)}
-.decklist{display:flex;flex-direction:column;gap:10px}
-.deck{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-align:left;width:100%}
-.deck .n{font-weight:600;font-size:17px}
-.deck .d{color:var(--muted);font-size:14px}
-.deck .c{margin-left:auto;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.deck.on{border-color:var(--accent)}
-.chk{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center;flex:none}
-.deck.on .chk{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.plan li{margin:6px 0}.plan b{color:var(--accent)}
+.btn svg{width:18px;height:18px}
+.row{display:flex;gap:12px;align-items:center}
+.row > *{flex:1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stats div{background:var(--fill);border-radius:14px;padding:14px 16px}
+.stats b{display:block;font-size:30px;font-weight:700;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+.stats span{font-size:14px;color:var(--sec)}
+.muted{color:var(--sec);font-size:15px}
+
+/* 그룹 목록 (설정·둘러보기) */
+.list{background:var(--card);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.li{display:flex;align-items:center;gap:14px;padding:13px 18px;min-height:52px;width:100%;color:var(--ink)}
+.li + .li{border-top:1px solid var(--sep)}
+.li .t{flex:1;min-width:0}
+.li .t small{display:block;color:var(--sec);font-size:14px;margin-top:1px}
+.li .v{color:var(--sec);font-size:16px;margin-left:auto;white-space:nowrap}
+.li select{color:var(--blue);background:transparent;border:0;text-align:right;direction:rtl;padding:6px 0;max-width:46vw}
+.li .play{width:38px;height:38px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--blue);flex:none}
+.li .play svg{width:16px;height:16px}
+.li .j{font-size:21px;font-weight:600}
+.li .k{font-size:14px;color:var(--sec)}
+.li .m{font-size:15px;color:var(--sec)}
+.li .ck{color:var(--blue);font-weight:600;margin-left:auto}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{padding:8px 14px;border-radius:999px;background:var(--fill);font-size:15px;color:var(--ink)}
+.chips button[aria-pressed="true"]{background:var(--blue);color:#fff;font-weight:600}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--fill);color:var(--sec);font-size:13px;font-weight:600}
+.badge.new{color:var(--blue)}.badge.ok{color:var(--green)}
 
 /* 학습 카드 */
-.study{display:flex;flex-direction:column;gap:14px;flex:1}
-.prog{height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
-.qcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;min-height:300px;justify-content:center}
-.qcard .scene{font-size:13px;color:var(--muted);letter-spacing:.04em}
-.qcard .main{font-size:clamp(28px,5vw,44px);font-weight:500;line-height:1.35;word-break:keep-all}
-.qcard .kana{font-size:clamp(18px,3vw,24px);color:var(--kana)}
-.qcard .ko{font-size:clamp(20px,3.4vw,28px);font-weight:500;margin-top:6px}
-.qcard .note{font-size:15px;color:var(--muted);max-width:52ch;line-height:1.6}
+.qcard{background:var(--card);border-radius:20px;padding:36px 40px;box-shadow:var(--shadow);min-height:330px;display:flex;flex-direction:column;justify-content:center}
+.qcard .where{color:var(--sec);font-size:15px}
+.qcard .main{font-size:clamp(30px,4.6vw,56px);font-weight:600;line-height:1.3;letter-spacing:-.3px;margin-top:12px;word-break:keep-all}
+.qcard .kana{font-size:clamp(17px,2vw,22px);color:var(--sec);margin-top:8px}
+.qcard .ko{font-size:clamp(20px,2.6vw,28px);margin-top:28px}
+.qcard .note{font-size:16px;color:var(--sec);margin-top:8px;max-width:60ch;line-height:1.55}
 .qcard .ko,.qcard .note{display:none}.qcard.open .ko,.qcard.open .note{display:block}
-.ctrl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.rate{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.rate .btn{flex-direction:column;gap:2px;min-height:64px}
-.rate small{font-size:12px;opacity:.75;font-weight:400}
-.rate .no{background:color-mix(in srgb,var(--warn) 18%,var(--surface-2))}
-.rate .ok{background:color-mix(in srgb,var(--ok) 22%,var(--surface-2))}
-.speed{display:flex;gap:6px;background:var(--surface-2);border-radius:10px;padding:3px}
-.speed button{padding:6px 12px;border-radius:8px;font-size:14px;color:var(--muted)}
-.speed button[aria-pressed="true"]{background:var(--surface);color:var(--fg);font-weight:600}
-.status{text-align:center;color:var(--muted);font-size:14px;min-height:1.5em}
+.phase{text-align:center;color:var(--sec);font-size:15px;min-height:1.4em}
+.rate{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rate button{background:var(--card);border-radius:14px;padding:14px;text-align:center;font-size:19px;font-weight:600;box-shadow:var(--shadow);min-height:70px}
+.rate small{display:block;font-weight:400;color:var(--sec);font-size:14px;margin-top:2px}
+.rate .no{color:var(--red)}.rate .mid{color:var(--orange)}.rate .ok{color:var(--green)}
+.prog{height:4px;background:var(--fill);border-radius:2px;overflow:hidden}.prog i{display:block;height:100%;background:var(--blue);transition:width .3s}
 .done{text-align:center;padding:40px 20px}
-.done .big{font-size:40px}
+.done .big{font-size:44px}
 
-/* 둘러보기 */
-.list{display:flex;flex-direction:column;gap:8px}
-.item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);text-align:left;width:100%}
-.item .t{flex:1;min-width:0}
-.item .j{font-size:20px;font-weight:500}
-.item .k{font-size:14px;color:var(--kana)}
-.item .m{font-size:15px;color:var(--muted)}
-.item .play{flex:none;width:40px;height:40px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center}
-.item .play svg{width:18px;height:18px}
-.scenes{display:flex;gap:8px;flex-wrap:wrap}
-.scenes button{padding:8px 14px;border-radius:999px;background:var(--surface-2);font-size:14px;color:var(--muted)}
-.scenes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:15px;z-index:30;max-width:90%;text-align:center}
-.field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
-.field:first-of-type{border-top:0}
-.field select{font:inherit;color:var(--fg);background:var(--surface-2);border:0;border-radius:8px;padding:8px 10px}
-.field small{display:block;color:var(--muted);font-size:13px}
-@media (max-width:520px){.stat b{font-size:22px}.qcard{padding:22px 16px}}
+/* 쓰기 공간 (애플펜슬) */
+.pad{position:relative;background:var(--card);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;min-height:300px;flex:1;display:flex;flex-direction:column}
+.pad .tools{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--sep);flex-wrap:wrap}
+.pad .tools .sp{flex:1}
+.pad .tools button{padding:7px 12px;border-radius:9px;background:var(--fill);font-size:14px;font-weight:500;color:var(--blue)}
+.pad .tools button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.pad .tools .dot{width:30px;height:30px;border-radius:50%;padding:0;font-size:0;color:transparent;overflow:hidden;background:var(--c)!important;border:3px solid var(--card);box-shadow:0 0 0 1px var(--sep)}
+.pad .tools .dot[aria-pressed="true"]{box-shadow:0 0 0 2px var(--blue)}
+.pad .tools .hint{color:var(--sec);font-size:13px;margin-left:4px}
+.pad .sheet{position:relative;flex:1;min-height:240px;background-image:linear-gradient(var(--sep) 1px,transparent 1px),linear-gradient(90deg,var(--sep) 1px,transparent 1px);background-size:56px 56px;background-position:center}
+.pad .guide{position:absolute;inset:0;padding:18px 24px;color:var(--ink);opacity:.16;font-size:clamp(36px,6.4vw,72px);line-height:1.45;overflow:hidden;font-weight:500;letter-spacing:.04em;pointer-events:none;user-select:none;word-break:keep-all}
+.pad .guide small{display:block;font-size:.34em;letter-spacing:.1em;opacity:.9;margin-top:.2em}
+.pad canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+
+/* ---- 아래 탭 (세로·아이폰) ---- */
+nav{display:none;position:fixed;left:0;right:0;bottom:0;background:var(--side);border-top:1px solid var(--sep);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
+nav button{flex:1;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--sec);font-size:11px}
+nav button svg{width:26px;height:26px}
+nav button[aria-selected="true"]{color:var(--blue)}
+@media (max-width:899px){
+  aside{display:none}
+  .pad .guide{font-size:clamp(30px,8vw,60px);padding:14px 16px}
+  nav{display:flex}
+  main{padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(92px + env(safe-area-inset-bottom,0px))}
+  .hdr h2{font-size:30px}
+  .qcard{padding:26px 20px;min-height:260px}
+  .stats b{font-size:24px}
+}
+@media (min-width:900px){ .only-narrow{display:none!important} }
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:15px;z-index:30;max-width:90%;text-align:center}
+@media (max-width:899px){ .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))} }
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
 </style>
 </head>
 <body>
-<header class="pad">
-  <div><h1>한다홍 일본어</h1><div class="sub" id="subTitle">공연장에서 바로 쓰는 일본어</div></div>
-  <div class="right"><span class="pill" id="streakPill">🔥 <b id="streak">0</b>일</span></div>
-</header>
-
-<main class="pad" id="main"></main>
-
-<nav>
-  <button data-tab="home" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>오늘</button>
-  <button data-tab="shadow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg>따라 말하기</button>
-  <button data-tab="browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>둘러보기</button>
-  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>설정</button>
-</nav>
+<aside id="side"></aside>
+<main id="main"></main>
+<nav id="nav"></nav>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -132,6 +165,15 @@ nav button[aria-selected="true"]{color:var(--accent);font-weight:600}
 "use strict";
 const $ = s => document.querySelector(s);
 const main = $("#main");
+const ICO = {
+  today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  shadow: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>',
+  browse: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.6 7.6"/><circle cx="11" cy="11" r="2"/></svg>',
+  repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+};
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const store = {
   get(k, d){ try { const v = localStorage.getItem("hd:"+k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -140,9 +182,10 @@ const store = {
 const S = {
   newPerDay: store.get("newPerDay", 10), speed: store.get("speed", 0.9), showKana: store.get("showKana", true),
   repeatTimes: store.get("repeatTimes", 2), activeDecks: store.get("activeDecks", null), voice: store.get("voice", ""),
+  ink: store.get("ink", "ink"), penWidth: store.get("penWidth", 4), fingerDraw: store.get("fingerDraw", false), guideNew: store.get("guideNew", true),
 };
-let prog = store.get("prog", {});        // id → {step, due, seen, lapses}
-let days = store.get("days", {});        // date → {new, review}
+let prog = store.get("prog", {});
+let days = store.get("days", {});
 let DATA = null, CARDS = [], BYID = {};
 let tab = "home";
 
@@ -158,19 +201,22 @@ async function load(){
     CARDS.push(c); BYID[c.id] = c;
   }
   if (!S.activeDecks) S.activeDecks = DATA.decks.map(d => d.id);
+  S.activeDecks = S.activeDecks.filter(id => DATA.decks.some(d => d.id === id));
+  if (!S.activeDecks.length) S.activeDecks = DATA.decks.map(d => d.id);
 }
 
 // ---------- 복습 간격 ----------
 const STEPS = [0, 10*60e3, 1*864e5, 3*864e5, 7*864e5, 14*864e5, 30*864e5, 60*864e5];
-function dueCards(){ const now = Date.now(); return CARDS.filter(c => S.activeDecks.includes(c.deck) && prog[c.id] && prog[c.id].due <= now).sort((a,b)=>prog[a.id].due-prog[b.id].due); }
-function newCards(limit){ return CARDS.filter(c => S.activeDecks.includes(c.deck) && !prog[c.id]).slice(0, limit); }
+const active = c => S.activeDecks.includes(c.deck);
+function dueCards(){ const now = Date.now(); return CARDS.filter(c => active(c) && prog[c.id] && prog[c.id].due <= now).sort((a,b)=>prog[a.id].due-prog[b.id].due); }
+function newCards(limit){ return CARDS.filter(c => active(c) && !prog[c.id]).slice(0, Math.max(0, limit)); }
 function todayStat(){ return days[todayKey()] || (days[todayKey()] = { new: 0, review: 0 }); }
 function rate(card, grade){ // 0 모름 1 애매 2 알아
   const p = prog[card.id] || { step: 0, due: 0, seen: 0, lapses: 0 };
   const first = p.seen === 0;
   p.seen++;
   if (grade === 0) { p.step = 0; p.lapses++; p.due = Date.now() + 5*60e3; }
-  else if (grade === 1) { p.step = Math.max(0, p.step); p.due = Date.now() + (p.step === 0 ? 10*60e3 : STEPS[p.step] * 0.6); }
+  else if (grade === 1) { p.due = Date.now() + (p.step === 0 ? 10*60e3 : STEPS[p.step] * 0.6); }
   else { p.step = Math.min(STEPS.length - 1, p.step + 1); p.due = Date.now() + STEPS[p.step]; }
   prog[card.id] = p; store.set("prog", prog);
   const t = todayStat(); if (first) t.new++; else t.review++; store.set("days", days);
@@ -208,7 +254,7 @@ function speak(text, rate = S.speed){
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function estimateMs(text, rate){ return Math.min(9000, 600 + text.replace(/\s/g,"").length * 260 / rate); }
 let loopToken = 0;
-async function shadow(card, times = S.repeatTimes, onPhase){ // 기기가 말함 → 사장님 차례(쉼) → 다시 들려줌
+async function shadow(card, times = S.repeatTimes, onPhase){ // 기기가 말함 → 내 차례(쉼) → 다시 들려줌
   const my = ++loopToken;
   for (let i = 0; i < times; i++) {
     onPhase && onPhase(i === 0 ? "듣기" : `다시 듣기 ${i+1}/${times}`);
@@ -220,76 +266,196 @@ async function shadow(card, times = S.repeatTimes, onPhase){ // 기기가 말함
 }
 function stopAll(){ loopToken++; speakToken++; TTS && TTS.cancel(); }
 
-// ---------- 화면 공통 ----------
+// ---------- 쓰기 공간 (애플펜슬) ----------
+// 펜슬 입력만 받고 손바닥·손가락은 무시(설정에서 손가락 허용 가능). 획은 CSS 픽셀 좌표로 저장해 두고 크기가 바뀌면 다시 그림.
+const INKS = [["ink","검정"],["blue","파랑"],["red","빨강"]];
+function makePad({ guide = "", kana = "", showGuide = true, hint = "" } = {}){
+  const root = el(`<div class="pad">
+    <div class="tools"><button data-act="undo">↶ 되돌리기</button><button data-act="clear">지우기</button><span class="hint">${esc(hint)}</span><span class="sp"></span>
+      <button data-act="guide" aria-pressed="${showGuide}">안내선</button>
+      ${INKS.map(([k,l]) => `<button class="dot" data-ink="${k}" aria-pressed="${S.ink === k}" style="--c:var(--${k})" title="${l}">${l}</button>`).join("")}</div>
+    <div class="sheet"><div class="guide jp" ${showGuide ? "" : "hidden"}>${esc(guide)}${kana ? `<small>${esc(kana)}</small>` : ""}</div><canvas></canvas></div></div>`);
+  const sheet = root.querySelector(".sheet"), cv = root.querySelector("canvas"), g = root.querySelector(".guide");
+  const ctx = cv.getContext("2d");
+  let strokes = [], cur = null, W = 0, H = 0, dpr = 1;
+  const color = k => getComputedStyle(document.documentElement).getPropertyValue(`--${k}`).trim() || "#000";
+  function size(){ const r = sheet.getBoundingClientRect(); if (!r.width || !r.height) return; W = r.width; H = r.height; dpr = Math.min(3, window.devicePixelRatio || 1); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); redraw(); }
+  function seg(st, a, b){ ctx.strokeStyle = color(st.ink); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = S.penWidth * (0.55 + Math.min(1, b.p) * 0.9); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+  function dot(st, a){ ctx.fillStyle = color(st.ink); ctx.beginPath(); ctx.arc(a.x, a.y, S.penWidth * 0.5, 0, Math.PI * 2); ctx.fill(); }
+  function redraw(){ ctx.clearRect(0, 0, W, H); for (const st of strokes) { if (st.pts.length === 1) dot(st, st.pts[0]); for (let i = 1; i < st.pts.length; i++) seg(st, st.pts[i-1], st.pts[i]); } }
+  const pt = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, p: e.pressure || 0.5 }; };
+  const allowed = e => e.pointerType === "pen" || e.pointerType === "mouse" || (e.pointerType === "touch" && S.fingerDraw);
+  cv.addEventListener("pointerdown", e => { if (!allowed(e) || cur) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = { id: e.pointerId, ink: S.ink, pts: [pt(e)] }; dot(cur, cur.pts[0]); });
+  cv.addEventListener("pointermove", e => { if (!cur || e.pointerId !== cur.id) return; e.preventDefault(); const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; for (const ev of evs) { const q = pt(ev); seg(cur, cur.pts[cur.pts.length-1], q); cur.pts.push(q); } });
+  const up = e => { if (!cur || e.pointerId !== cur.id) return; strokes.push(cur); cur = null; };
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  root.querySelector('[data-act="undo"]').onclick = () => { strokes.pop(); redraw(); };
+  root.querySelector('[data-act="clear"]').onclick = () => { strokes = []; redraw(); };
+  root.querySelector('[data-act="guide"]').onclick = e => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); g.hidden = !on; };
+  root.querySelectorAll(".dot").forEach(b => b.onclick = () => { S.ink = b.dataset.ink; store.set("ink", S.ink); root.querySelectorAll(".dot").forEach(x => x.setAttribute("aria-pressed", x.dataset.ink === S.ink)); });
+  const ro = new ResizeObserver(size); ro.observe(sheet);
+  return {
+    el: root,
+    setGuide(j, k){ g.innerHTML = esc(j) + (k ? `<small>${esc(k)}</small>` : ""); },
+    showGuide(on){ g.hidden = !on; root.querySelector('[data-act="guide"]').setAttribute("aria-pressed", on); },
+    clear(){ strokes = []; redraw(); },
+    isEmpty(){ return strokes.length === 0; },
+  };
+}
+
+// ---------- 공통 ----------
 let toastTimer;
 function toast(m){ const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200); }
 function el(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
-const icoPlay = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>';
-function setTab(t){ stopAll(); tab = t; document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t)); render(); }
-document.querySelectorAll("nav button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
-function render(){ main.innerHTML = ""; $("#streak").textContent = streak(); ({ home, shadow: shadowTab, browse, settings, study }[tab])(); main.scrollTop = 0; }
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+function setTab(t){ stopAll(); if (t !== "study") session = null; tab = t; render(); }
+function speedSeg(onChange){
+  const s = el(`<div class="seg">${[[0.75,"천천히"],[0.9,"조금 천천히"],[1,"보통"]].map(([r,l]) => `<button data-r="${r}" aria-pressed="${S.speed === r}">${l}</button>`).join("")}</div>`);
+  s.querySelectorAll("button").forEach(b => b.onclick = () => { S.speed = +b.dataset.r; store.set("speed", S.speed); s.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", +x.dataset.r === S.speed)); onChange && onChange(); });
+  return s;
+}
+function header(title, sub, right){
+  const h = el(`<div class="hdr"><h2>${title}</h2>${sub ? `<span class="sub">${sub}</span>` : ""}</div>`);
+  if (right) { right.classList.add("right"); h.append(right); }
+  return h;
+}
+function toggleDeck(id){
+  const i = S.activeDecks.indexOf(id);
+  if (i >= 0) { if (S.activeDecks.length === 1) return toast("덱은 하나 이상 켜 두세요"); S.activeDecks.splice(i, 1); } else S.activeDecks.push(id);
+  store.set("activeDecks", S.activeDecks); session = null; render();
+}
+function deckCounts(d){ const all = CARDS.filter(c => c.deck === d.id); return { n: all.length, done: all.filter(c => prog[c.id]).length }; }
+
+function renderSide(){
+  const side = $("#side"); side.innerHTML = "";
+  const todayN = dueCards().length + newCards(S.newPerDay - todayStat().new).length;
+  const cur = (tab === "study" ? "home" : tab);
+  const item = (id, color, ico, label, right) => { const b = el(`<button class="srow" aria-current="${cur === id}"><span class="ic" style="background:${color}">${ico}</span><span>${label}</span>${right}</button>`); b.onclick = () => setTab(id); return b; };
+  side.append(el(`<h1>일본어</h1>`));
+  side.append(item("home", "var(--blue)", ICO.today, "오늘", `<span class="n">${todayN || ""}</span>`));
+  side.append(item("shadow", "var(--orange)", ICO.shadow, "따라 말하기", ""));
+  side.append(item("write", "var(--green)", ICO.pen, "쓰기 연습", ""));
+  side.append(item("browse", "var(--purple)", ICO.browse, "둘러보기", ""));
+  side.append(el(`<div class="sec">덱 (눌러서 켜고 끄기)</div>`));
+  for (const d of DATA.decks) {
+    const on = S.activeDecks.includes(d.id); const { n, done } = deckCounts(d);
+    const b = el(`<button class="srow ${on ? "" : "dim"}"><span>${esc(d.name)}</span><span class="n">${done}/${n}</span><span class="ck">${on ? "✓" : ""}</span></button>`);
+    b.onclick = () => toggleDeck(d.id); side.append(b);
+  }
+  side.append(el(`<div class="sec">기록</div>`));
+  side.append(el(`<div class="srow"><span>연속</span><span class="n">${streak()}일</span></div>`));
+  side.append(el(`<div class="spacer"></div>`));
+  side.append(item("settings", "var(--gray)", ICO.settings, "설정", ""));
+  const nav = $("#nav"); nav.innerHTML = "";
+  for (const [id, label, ico] of [["home","오늘",ICO.today],["shadow","따라 말하기",ICO.shadow],["write","쓰기",ICO.pen],["browse","둘러보기",ICO.browse],["settings","설정",ICO.settings]]) {
+    const b = el(`<button aria-selected="${cur === id}">${ico}${label}</button>`); b.onclick = () => setTab(id); nav.append(b);
+  }
+}
+function render(){ main.innerHTML = ""; renderSide(); ({ home, shadow: shadowTab, write: writeTab, browse, settings, study }[tab])(); main.scrollTop = 0; }
 
 // ---------- 오늘 ----------
 function home(){
-  const due = dueCards().length, fresh = newCards(S.newPerDay - Math.min(S.newPerDay, todayStat().new)).length;
+  const due = dueCards().length, fresh = newCards(S.newPerDay - todayStat().new).length;
   const t = todayStat(); const learned = Object.keys(prog).length;
   const m = new Date().getMonth() + 1; const plan = DATA.plan.find(p => parseInt(p.month) === m) || DATA.plan[0];
-  main.append(el(`<div class="card"><h2>오늘 할 일</h2>
-    <div class="stat"><div><b>${due}</b><span>복습할 카드</span></div><div><b>${fresh}</b><span>새 카드</span></div><div><b>${t.new + t.review}</b><span>오늘 한 카드</span></div></div>
-    <div class="row" style="margin-top:14px"><button class="btn primary big grow" id="startBtn">${due + fresh > 0 ? "학습 시작" : "오늘 몫 끝 · 더 하기"}</button></div>
-    <div class="status" style="margin-top:8px">외운 카드 ${learned} / 전체 ${CARDS.filter(c=>S.activeDecks.includes(c.deck)).length}</div></div>`));
-  $("#startBtn").onclick = () => { tab = "study"; render(); };
-  main.append(el(`<div class="card"><h2>${plan.month} 목표</h2><div>${plan.goal}</div></div>`));
-  const dl = el(`<div class="card"><h2>공부할 덱 (눌러서 켜고 끄기)</h2><div class="decklist"></div></div>`);
+  const d = new Date(); const dateStr = `${d.getMonth()+1}월 ${d.getDate()}일 ${"일월화수목금토"[d.getDay()]}요일`;
+  main.append(header("오늘", dateStr));
+  const c = el(`<div class="content">
+    <div class="card">
+      <div class="stats"><div><b>${due}</b><span>복습할 카드</span></div><div><b>${fresh}</b><span>새 카드</span></div><div><b>${t.new + t.review}</b><span>오늘 한 카드</span></div></div>
+      <div class="row" style="margin-top:14px"><button class="btn fill" id="startBtn" style="font-size:20px;min-height:60px">${due + fresh > 0 ? "학습 시작" : "오늘 몫 끝 · 10장 더 하기"}</button></div>
+      <div class="muted" style="margin-top:10px">외운 카드 ${learned} / 전체 ${CARDS.filter(active).length} · 연속 ${streak()}일</div>
+    </div>
+    <div class="card"><h3>${esc(plan.month)} 목표</h3><div>${esc(plan.goal)}</div></div>
+    <div class="only-narrow"><h3 class="sec" style="margin-left:4px">덱 (눌러서 켜고 끄기)</h3><div class="list" id="deckList"></div></div>
+  </div>`);
+  main.append(c);
+  $("#startBtn").onclick = () => { session = null; tab = "study"; render(); };
+  const dl = $("#deckList");
   for (const d of DATA.decks) {
-    const n = CARDS.filter(c => c.deck === d.id).length, done = CARDS.filter(c => c.deck === d.id && prog[c.id]).length;
-    const b = el(`<button class="deck ${S.activeDecks.includes(d.id) ? "on" : ""}"><span class="chk">${S.activeDecks.includes(d.id) ? "✓" : ""}</span><span><div class="n">${d.name}</div><div class="d">${d.desc}</div></span><span class="c">${done}/${n}</span></button>`);
-    b.onclick = () => { const i = S.activeDecks.indexOf(d.id); if (i >= 0) { if (S.activeDecks.length === 1) return toast("하나는 켜 두세요"); S.activeDecks.splice(i, 1); } else S.activeDecks.push(d.id); store.set("activeDecks", S.activeDecks); render(); };
-    dl.querySelector(".decklist").append(b);
+    const on = S.activeDecks.includes(d.id); const { n, done } = deckCounts(d);
+    const b = el(`<button class="li"><span class="t">${esc(d.name)}<small>${esc(d.desc)}</small></span><span class="v">${done}/${n}</span><span class="ck">${on ? "✓" : ""}</span></button>`);
+    b.onclick = () => toggleDeck(d.id); dl.append(b);
   }
-  main.append(dl);
 }
 
-// ---------- 학습 세션 ----------
+// ---------- 학습 ----------
 let session = null;
 function study(){
   if (!session) {
-    const fresh = newCards(Math.max(0, S.newPerDay - todayStat().new));
+    const fresh = newCards(S.newPerDay - todayStat().new);
     let q = [...dueCards(), ...fresh];
-    if (!q.length) q = newCards(S.newPerDay); // 더 하기
+    if (!q.length) q = newCards(10);
+    if (!q.length) { toast("새 카드가 다 떨어졌어요. 덱을 더 켜 주세요."); tab = "home"; return home(); }
     session = { q, i: 0, total: q.length, done: 0 };
   }
   const s = session;
   if (s.i >= s.q.length) {
-    main.append(el(`<div class="card done"><div class="big">🎉</div><h2 style="font-size:20px;color:var(--fg)">오늘 몫 끝</h2><p>${s.done}장 공부했어요. 연속 ${streak()}일.</p><div class="row" style="justify-content:center"><button class="btn primary" id="moreBtn">10장 더</button><button class="btn" id="homeBtn">오늘로</button></div></div>`));
+    main.append(header("오늘", "끝"));
+    main.append(el(`<div class="content"><div class="card done"><div class="big">🎉</div><h2 style="font-size:22px;margin:8px 0">오늘 몫 끝</h2><p class="muted">${s.done}장 공부했어요. 연속 ${streak()}일.</p><div class="row" style="max-width:420px;margin:12px auto 0"><button class="btn fill" id="moreBtn">10장 더</button><button class="btn" id="homeBtn">오늘로</button></div></div></div>`));
     $("#moreBtn").onclick = () => { session = { q: newCards(10), i: 0, total: 10, done: 0 }; if (!session.q.length) { session = null; toast("새 카드가 다 떨어졌어요. 덱을 더 켜 주세요."); setTab("home"); return; } render(); };
-    $("#homeBtn").onclick = () => { session = null; setTab("home"); };
+    $("#homeBtn").onclick = () => setTab("home");
     return;
   }
   const c = s.q[s.i]; const isNew = !prog[c.id];
-  const wrap = el(`<div class="study">
+  // 새 카드: 글자와 안내선을 보여 주고 따라 쓰기. 복습: 듣고 받아쓰기(정답은 숨김).
+  const trace = isNew && S.guideNew;
+  main.append(header("오늘", `${s.i + 1} / ${s.total} · ${isNew ? "새 카드" : "복습"}`, speedSeg()));
+  const wrap = el(`<div class="content fill">
     <div class="prog"><i style="width:${(s.i / s.total) * 100}%"></i></div>
-    <div class="row"><span class="pill">${s.i + 1} / ${s.total}</span><span class="pill">${isNew ? "새 카드" : "복습"}</span><span class="grow"></span>
-      <div class="speed">${[0.75, 0.9, 1].map(r => `<button data-r="${r}" aria-pressed="${S.speed === r}">${r === 1 ? "보통" : r === 0.9 ? "조금 천천히" : "천천히"}</button>`).join("")}</div></div>
-    <div class="qcard" id="qcard"><div class="scene">${c.deckName} · ${c.scene}</div><div class="main jp">${c.jp}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${kanaLine(c)}</div><div class="ko">${c.ko}</div><div class="note">${c.note}</div></div>
-    <div class="status" id="phase"></div>
-    <div class="ctrl"><button class="btn" id="playBtn">${icoPlay} 듣기</button><button class="btn primary" id="shadowBtn">🔁 따라 말하기</button><button class="btn" id="revealBtn">뜻 보기</button></div>
-    <div class="rate" id="rate" hidden><button class="btn no" data-g="0">모름<small>5분 뒤 다시</small></button><button class="btn" data-g="1">애매<small>조금 뒤 다시</small></button><button class="btn ok" data-g="2">알아<small>${isNew ? "내일" : "더 나중에"}</small></button></div>
+    <div class="ans ${trace ? "" : "quiz"}" id="ans">${trace
+      ? `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="ko">${esc(c.ko)}</div><div class="note">${esc(c.note)}</div>`
+      : `<span class="q">듣고 아래에 써 보세요</span><span class="w">${esc(c.deckName)} › ${esc(c.scene)}</span>`}</div>
+    <div class="row"><button class="btn fill" id="playBtn">${ICO.play} 듣기</button><button class="btn" id="shadowBtn">${ICO.repeat} 따라 말하기 ${S.repeatTimes}회</button><button class="btn" id="revealBtn" ${trace ? "hidden" : ""}>정답 보기</button></div>
+    <div class="phase" id="phase"></div>
+    <div id="padSlot" style="display:flex;flex:1;min-height:300px"></div>
+    <div class="rate" id="rate" ${trace ? "" : "hidden"}><button class="no" data-g="0">모름<small>5분 뒤 다시</small></button><button class="mid" data-g="1">애매<small>조금 뒤 다시</small></button><button class="ok" data-g="2">알아<small>${isNew ? "내일" : "더 나중에"}</small></button></div>
   </div>`);
   main.append(wrap);
-  const phase = t => $("#phase").textContent = t;
-  wrap.querySelectorAll(".speed button").forEach(b => b.onclick = () => { S.speed = +b.dataset.r; store.set("speed", S.speed); wrap.querySelectorAll(".speed button").forEach(x => x.setAttribute("aria-pressed", +x.dataset.r === S.speed)); });
+  const pad = makePad({ guide: c.jp, kana: S.showKana ? kanaLine(c) : "", showGuide: trace, hint: trace ? "연한 글자를 따라 써 보세요" : "펜슬로 들은 문장을 써 보세요" });
+  $("#padSlot").append(pad.el);
+  const phase = t => { const p = $("#phase"); if (p) p.textContent = t; };
   $("#playBtn").onclick = () => { stopAll(); phase("듣기"); speak(c.jp).then(() => phase("")); };
   $("#shadowBtn").onclick = () => { stopAll(); shadow(c, S.repeatTimes, phase); };
-  $("#qcard").onclick = () => $("#playBtn").click();
-  const reveal = () => { $("#qcard").classList.add("open"); $("#rate").hidden = false; $("#revealBtn").hidden = true; };
-  $("#revealBtn").onclick = reveal;
+  $("#revealBtn").onclick = () => {
+    const a = $("#ans"); a.classList.remove("quiz");
+    a.innerHTML = `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="ko">${esc(c.ko)}</div><div class="note">${esc(c.note)}</div>`;
+    pad.showGuide(true); $("#rate").hidden = false; $("#revealBtn").hidden = true;
+  };
   wrap.querySelectorAll("#rate button").forEach(b => b.onclick = () => { stopAll(); rate(c, +b.dataset.g); s.done++; if (+b.dataset.g === 0) { s.q.push(c); s.total++; } s.i++; render(); });
-  // 새 카드는 자동으로 한 번 들려주고 따라 말하기
   if (isNew) setTimeout(() => shadow(c, S.repeatTimes, phase), 250); else setTimeout(() => speak(c.jp), 250);
 }
 
-// ---------- 따라 말하기 (손 안 대고 이어서) ----------
+// ---------- 쓰기 연습 ----------
+let wr = { deck: null, scene: null, i: 0, guide: true };
+function writeTab(){
+  const deck = DATA.decks.find(d => d.id === (wr.deck || S.activeDecks[0])) || DATA.decks[0]; wr.deck = deck.id;
+  const scenes = deck.scenes; const scene = scenes.find(x => x.name === wr.scene) || scenes[0]; wr.scene = scene.name;
+  const items = CARDS.filter(c => c.deck === deck.id && c.scene === scene.name);
+  wr.i = Math.min(wr.i, items.length - 1);
+  const c = items[wr.i];
+  main.append(header("쓰기 연습", `${esc(deck.name)} › ${esc(scene.name)} · ${wr.i + 1} / ${items.length}`, speedSeg()));
+  const wrap = el(`<div class="content fill">
+    <div class="card" style="padding:14px 18px"><div class="chips" id="deckPick">${DATA.decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deck.id}">${esc(d.name)}</button>`).join("")}</div>
+      <div class="chips" id="scenePick" style="margin-top:8px">${scenes.map(x => `<button data-s="${esc(x.name)}" aria-pressed="${x.name === scene.name}">${esc(x.name)}</button>`).join("")}</div></div>
+    <div class="ans quiz" id="ans"><span class="q">${esc(c.ko)}</span><span class="w">${c.note ? esc(c.note) : ""}</span></div>
+    <div id="padSlot" style="display:flex;flex:1;min-height:300px"></div>
+    <div class="row"><button class="btn" id="prevBtn">◀ 이전</button><button class="btn fill" id="playBtn">${ICO.play} 듣기</button><button class="btn" id="modeBtn">${wr.guide ? "받아쓰기로" : "따라 쓰기로"}</button><button class="btn" id="nextBtn">다음 ▶</button></div>
+  </div>`);
+  main.append(wrap);
+  const pad = makePad({ guide: c.jp, kana: S.showKana ? kanaLine(c) : "", showGuide: wr.guide, hint: wr.guide ? "연한 글자를 따라 써 보세요" : "듣고 받아써 보세요" });
+  $("#padSlot").append(pad.el);
+  if (!wr.guide) { const a = $("#ans"); a.innerHTML = `<span class="q">듣고 써 보세요</span><span class="sp" style="flex:1"></span><button class="btn" id="showBtn" style="flex:none;min-height:40px;padding:8px 14px;font-size:15px">정답 보기</button>`; $("#showBtn").onclick = () => { a.innerHTML = `<span class="q jp">${esc(c.jp)}</span><span class="w">${esc(c.ko)}</span>`; pad.showGuide(true); }; }
+  wrap.querySelectorAll("#deckPick button").forEach(b => b.onclick = () => { stopAll(); wr.deck = b.dataset.d; wr.scene = null; wr.i = 0; render(); });
+  wrap.querySelectorAll("#scenePick button").forEach(b => b.onclick = () => { stopAll(); wr.scene = b.dataset.s; wr.i = 0; render(); });
+  $("#prevBtn").onclick = () => { stopAll(); wr.i = (wr.i - 1 + items.length) % items.length; render(); };
+  $("#nextBtn").onclick = () => { stopAll(); wr.i = (wr.i + 1) % items.length; render(); };
+  $("#playBtn").onclick = () => { stopAll(); speak(c.jp); };
+  $("#modeBtn").onclick = () => { stopAll(); wr.guide = !wr.guide; render(); };
+  setTimeout(() => speak(c.jp), 250);
+}
+
+// ---------- 따라 말하기 ----------
 let sh = { deck: null, scene: null, i: 0, running: false };
 function shadowTab(){
   const deck = DATA.decks.find(d => d.id === (sh.deck || S.activeDecks[0])) || DATA.decks[0]; sh.deck = deck.id;
@@ -297,28 +463,27 @@ function shadowTab(){
   const items = CARDS.filter(c => c.deck === deck.id && c.scene === scene.name);
   sh.i = Math.min(sh.i, items.length - 1);
   const c = items[sh.i];
-  const wrap = el(`<div class="study">
-    <div class="card"><h2>덱</h2><div class="scenes" id="deckPick">${DATA.decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deck.id}">${d.name}</button>`).join("")}</div>
-      <h2 style="margin-top:12px">장면</h2><div class="scenes" id="scenePick">${scenes.map(x => `<button data-s="${x.name}" aria-pressed="${x.name === scene.name}">${x.name}</button>`).join("")}</div></div>
-    <div class="qcard open" id="qcard"><div class="scene">${sh.i + 1} / ${items.length}</div><div class="main jp">${c.jp}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${kanaLine(c)}</div><div class="ko">${c.ko}</div></div>
-    <div class="status" id="phase">${sh.running ? "" : "▶ 시작을 누르면 한 문장씩: 듣기 → 따라 말하기 → 다시 듣기 → 다음 문장"}</div>
-    <div class="ctrl"><button class="btn" id="prevBtn">◀ 이전</button><button class="btn primary big" id="runBtn">${sh.running ? "■ 멈춤" : "▶ 시작"}</button><button class="btn" id="nextBtn">다음 ▶</button></div>
-    <div class="row" style="justify-content:center"><div class="speed">${[0.75, 0.9, 1].map(r => `<button data-r="${r}" aria-pressed="${S.speed === r}">${r === 1 ? "보통" : r === 0.9 ? "조금 천천히" : "천천히"}</button>`).join("")}</div></div>
+  main.append(header("따라 말하기", `${esc(deck.name)} › ${esc(scene.name)}`, speedSeg()));
+  const wrap = el(`<div class="content">
+    <div class="card"><h3>덱</h3><div class="chips" id="deckPick">${DATA.decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deck.id}">${esc(d.name)}</button>`).join("")}</div>
+      <h3 style="margin-top:14px">장면</h3><div class="chips" id="scenePick">${scenes.map(x => `<button data-s="${esc(x.name)}" aria-pressed="${x.name === scene.name}">${esc(x.name)}</button>`).join("")}</div></div>
+    <div class="qcard open" id="qcard"><div class="where">${sh.i + 1} / ${items.length}</div><div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="ko">${esc(c.ko)}</div></div>
+    <div class="phase" id="phase">${sh.running ? "" : "시작을 누르면 한 문장씩: 듣기 → 따라 말하기 → 다시 듣기 → 다음 문장"}</div>
+    <div class="row"><button class="btn" id="prevBtn">◀ 이전</button><button class="btn fill" id="runBtn" style="flex:2;font-size:20px">${sh.running ? "■ 멈춤" : "▶ 시작"}</button><button class="btn" id="nextBtn">다음 ▶</button></div>
   </div>`);
   main.append(wrap);
   wrap.querySelectorAll("#deckPick button").forEach(b => b.onclick = () => { stopAll(); sh = { deck: b.dataset.d, scene: null, i: 0, running: false }; render(); });
   wrap.querySelectorAll("#scenePick button").forEach(b => b.onclick = () => { stopAll(); sh.scene = b.dataset.s; sh.i = 0; sh.running = false; render(); });
-  wrap.querySelectorAll(".speed button").forEach(b => b.onclick = () => { S.speed = +b.dataset.r; store.set("speed", S.speed); wrap.querySelectorAll(".speed button").forEach(x => x.setAttribute("aria-pressed", +x.dataset.r === S.speed)); });
   $("#prevBtn").onclick = () => { stopAll(); sh.i = (sh.i - 1 + items.length) % items.length; sh.running = false; render(); };
   $("#nextBtn").onclick = () => { stopAll(); sh.i = (sh.i + 1) % items.length; sh.running = false; render(); };
   $("#qcard").onclick = () => { stopAll(); sh.running = false; speak(c.jp); };
   $("#runBtn").onclick = async () => {
     if (sh.running) { stopAll(); sh.running = false; render(); return; }
     sh.running = true; render();
-    const my = ++loopToken; // render() 뒤에 토큰을 잡아야 함
+    const my = ++loopToken;
     for (let k = sh.i; k < items.length; k++) {
       sh.i = k; const card = items[k];
-      const q = $("#qcard"); if (q) { q.querySelector(".scene").textContent = `${k + 1} / ${items.length}`; q.querySelector(".main").textContent = card.jp; q.querySelector(".kana").textContent = kanaLine(card); q.querySelector(".ko").textContent = card.ko; }
+      const q = $("#qcard"); if (q) { q.querySelector(".where").textContent = `${k + 1} / ${items.length}`; q.querySelector(".main").textContent = card.jp; q.querySelector(".kana").textContent = kanaLine(card); q.querySelector(".ko").textContent = card.ko; }
       const ok = await shadow(card, S.repeatTimes, t => { const p = $("#phase"); if (p) p.textContent = t; });
       if (!ok || my !== loopToken) return;
       await sleep(600); if (my !== loopToken) return;
@@ -333,15 +498,17 @@ function browse(){
   const deck = DATA.decks.find(d => d.id === br.deck) || DATA.decks[0]; br.deck = deck.id;
   const scenes = [{ name: "전체" }, ...deck.scenes]; const scene = scenes.find(x => x.name === br.scene) || scenes[0]; br.scene = scene.name;
   const items = CARDS.filter(c => c.deck === deck.id && (scene.name === "전체" || c.scene === scene.name));
-  const wrap = el(`<div class="study"><div class="card"><div class="scenes" id="deckPick">${DATA.decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deck.id}">${d.name}</button>`).join("")}</div>
-    <div class="scenes" id="scenePick" style="margin-top:10px">${scenes.map(x => `<button data-s="${x.name}" aria-pressed="${x.name === scene.name}">${x.name}</button>`).join("")}</div></div><div class="list" id="list"></div></div>`);
+  main.append(header("둘러보기", `${items.length}장`));
+  const wrap = el(`<div class="content"><div class="card"><div class="chips" id="deckPick">${DATA.decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deck.id}">${esc(d.name)}</button>`).join("")}</div>
+    <div class="chips" id="scenePick" style="margin-top:10px">${scenes.map(x => `<button data-s="${esc(x.name)}" aria-pressed="${x.name === scene.name}">${esc(x.name)}</button>`).join("")}</div></div>
+    <div class="muted" style="margin:-4px 4px 0">재생 버튼은 듣기, 글자를 누르면 따라 말하기 한 번</div><div class="list" id="list"></div></div>`);
   main.append(wrap);
   wrap.querySelectorAll("#deckPick button").forEach(b => b.onclick = () => { br = { deck: b.dataset.d, scene: null }; render(); });
   wrap.querySelectorAll("#scenePick button").forEach(b => b.onclick = () => { br.scene = b.dataset.s; render(); });
   const list = $("#list");
   for (const c of items) {
     const p = prog[c.id];
-    const it = el(`<div class="item"><span class="play">${icoPlay}</span><div class="t"><div class="j jp">${c.jp}</div><div class="k jp">${kanaLine(c)}</div><div class="m">${c.ko}${c.note ? " · " + c.note : ""}</div></div><span class="pill" style="flex:none">${p ? (p.step >= 4 ? "외움" : "학습 중") : "새"}</span></div>`);
+    const it = el(`<div class="li"><button class="play">${ICO.play}</button><button class="t"><div class="j jp">${esc(c.jp)}</div><div class="k jp">${esc(kanaLine(c))}</div><div class="m">${esc(c.ko)}${c.note ? " · " + esc(c.note) : ""}</div></button><span class="badge ${p ? (p.step >= 4 ? "ok" : "") : "new"}">${p ? (p.step >= 4 ? "외움" : "학습 중") : "새"}</span></div>`);
     it.querySelector(".play").onclick = () => { stopAll(); speak(c.jp); };
     it.querySelector(".t").onclick = () => { stopAll(); shadow(c, 1); };
     list.append(it);
@@ -352,25 +519,42 @@ function browse(){
 function settings(){
   refreshVoices();
   const total = Object.values(days).reduce((a, b) => a + b.new + b.review, 0);
-  const wrap = el(`<div class="study">
-    <div class="card"><h2>학습</h2>
-      <div class="field"><span>하루 새 카드<small>복습은 별도로 다 나와요</small></span><select id="npd">${[5,10,15,20].map(n => `<option value="${n}" ${S.newPerDay === n ? "selected" : ""}>${n}장</option>`).join("")}</select></div>
-      <div class="field"><span>따라 말하기 반복<small>듣기 → 말하기를 몇 번 할지</small></span><select id="rep">${[1,2,3].map(n => `<option value="${n}" ${S.repeatTimes === n ? "selected" : ""}>${n}번</option>`).join("")}</select></div>
-      <div class="field"><span>읽는 법(가나) 표시<small>익숙해지면 꺼 보세요</small></span><select id="kana"><option value="1" ${S.showKana ? "selected" : ""}>보이기</option><option value="0" ${!S.showKana ? "selected" : ""}>숨기기</option></select></div>
-      <div class="field"><span>일본어 목소리<small>${voices.length ? voices.length + "개 사용 가능" : "목소리 목록을 못 불러왔어요. 한 번 재생 뒤 다시 열어 보세요."}</small></span><select id="voice"><option value="">자동(가장 좋은 것)</option>${voices.map(v => `<option value="${v.name}" ${S.voice === v.name ? "selected" : ""}>${v.name}</option>`).join("")}</select></div>
-      <div class="row" style="margin-top:8px"><button class="btn" id="testVoice">${icoPlay} 목소리 들어보기</button></div>
+  main.append(header("설정"));
+  const wrap = el(`<div class="content">
+    <div class="sec" style="margin:0 4px -6px">학습</div>
+    <div class="list">
+      <label class="li"><span class="t">하루 새 카드<small>복습은 별도로 다 나와요</small></span><select id="npd">${[5,10,15,20].map(n => `<option value="${n}" ${S.newPerDay === n ? "selected" : ""}>${n}장</option>`).join("")}</select></label>
+      <label class="li"><span class="t">따라 말하기 반복<small>듣기 → 말하기를 몇 번 할지</small></span><select id="rep">${[1,2,3].map(n => `<option value="${n}" ${S.repeatTimes === n ? "selected" : ""}>${n}번</option>`).join("")}</select></label>
+      <label class="li"><span class="t">읽는 법(가나) 표시<small>익숙해지면 꺼 보세요</small></span><select id="kana"><option value="1" ${S.showKana ? "selected" : ""}>보이기</option><option value="0" ${!S.showKana ? "selected" : ""}>숨기기</option></select></label>
+      <label class="li"><span class="t">일본어 목소리<small>${voices.length ? voices.length + "개 사용 가능" : "목록을 못 불러왔어요. 소리를 한 번 재생한 뒤 다시 열어 보세요."}</small></span><select id="voice"><option value="">자동(가장 좋은 것)</option>${voices.map(v => `<option value="${esc(v.name)}" ${S.voice === v.name ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
+      <button class="li" id="testVoice" style="color:var(--blue)">목소리 들어보기</button>
     </div>
-    <div class="card"><h2>기록</h2><div class="stat"><div><b>${streak()}</b><span>연속 일</span></div><div><b>${Object.keys(prog).length}</b><span>본 카드</span></div><div><b>${total}</b><span>누적 학습</span></div></div>
-      <div class="row" style="margin-top:12px"><button class="btn" id="exportBtn">기록 내보내기</button><label class="btn">가져오기<input type="file" id="importFile" accept="application/json" hidden></label><button class="btn" id="resetBtn" style="color:var(--warn)">기록 초기화</button></div>
-      <small style="color:var(--muted)">기록은 이 기기 안에만 있어요. 가끔 내보내기로 파일을 남겨 두세요.</small></div>
-    <div class="card"><h2>3월까지 플랜</h2><ul class="plan" style="margin:0;padding-left:18px">${DATA.plan.map(p => `<li><b>${p.month}</b> ${p.goal}</li>`).join("")}</ul></div>
-    <div class="status">버전 ${window.APP_V || "1"} · 자막·토크에서 뽑은 새 덱은 Claude에게 부탁하면 추가돼요</div>
+    <div class="sec" style="margin:8px 4px -6px">애플펜슬</div>
+    <div class="list">
+      <label class="li"><span class="t">펜 굵기</span><select id="penw">${[[3,"가늘게"],[4,"보통"],[6,"굵게"]].map(([n,l]) => `<option value="${n}" ${S.penWidth === n ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="li"><span class="t">손가락으로도 쓰기<small>끄면 펜슬만 인식해서 손바닥이 닿아도 안 그려져요</small></span><select id="finger"><option value="0" ${!S.fingerDraw ? "selected" : ""}>펜슬만</option><option value="1" ${S.fingerDraw ? "selected" : ""}>손가락도</option></select></label>
+      <label class="li"><span class="t">새 카드는 안내선 따라 쓰기<small>끄면 새 카드도 듣고 받아쓰기</small></span><select id="gnew"><option value="1" ${S.guideNew ? "selected" : ""}>켬</option><option value="0" ${!S.guideNew ? "selected" : ""}>끔</option></select></label>
+    </div>
+    <div class="sec" style="margin:8px 4px -6px">기록</div>
+    <div class="card"><div class="stats"><div><b>${streak()}</b><span>연속 일</span></div><div><b>${Object.keys(prog).length}</b><span>본 카드</span></div><div><b>${total}</b><span>누적 학습</span></div></div></div>
+    <div class="list">
+      <button class="li" id="exportBtn" style="color:var(--blue)">기록 내보내기 (파일로 저장)</button>
+      <label class="li" style="color:var(--blue)">기록 가져오기<input type="file" id="importFile" accept="application/json" hidden></label>
+      <button class="li" id="resetBtn" style="color:var(--red)">기록 초기화</button>
+    </div>
+    <div class="muted" style="margin:-4px 4px 0">기록은 이 기기 안에만 있어요. 가끔 내보내기로 파일을 남겨 두세요.</div>
+    <div class="sec" style="margin:8px 4px -6px">3월까지 플랜</div>
+    <div class="list">${DATA.plan.map(p => `<div class="li"><span class="t"><b>${esc(p.month)}</b><small style="font-size:15px;color:var(--ink)">${esc(p.goal)}</small></span></div>`).join("")}</div>
+    <div class="muted" style="text-align:center;margin-top:8px">버전 ${window.APP_V || "1"} · 자막·토크에서 뽑은 새 덱은 Claude에게 부탁하면 추가돼요</div>
   </div>`);
   main.append(wrap);
   $("#npd").onchange = e => { S.newPerDay = +e.target.value; store.set("newPerDay", S.newPerDay); };
   $("#rep").onchange = e => { S.repeatTimes = +e.target.value; store.set("repeatTimes", S.repeatTimes); };
   $("#kana").onchange = e => { S.showKana = e.target.value === "1"; store.set("showKana", S.showKana); };
   $("#voice").onchange = e => { S.voice = e.target.value; store.set("voice", S.voice); };
+  $("#penw").onchange = e => { S.penWidth = +e.target.value; store.set("penWidth", S.penWidth); };
+  $("#finger").onchange = e => { S.fingerDraw = e.target.value === "1"; store.set("fingerDraw", S.fingerDraw); };
+  $("#gnew").onchange = e => { S.guideNew = e.target.value === "1"; store.set("guideNew", S.guideNew); };
   $("#testVoice").onclick = () => speak("今日は来てくれてありがとう。楽しんでますか？");
   $("#exportBtn").onclick = () => {
     const blob = new Blob([JSON.stringify({ prog, days, settings: S }, null, 1)], { type: "application/json" });
@@ -378,11 +562,12 @@ function settings(){
   };
   $("#importFile").onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (d.prog) prog = d.prog; if (d.days) days = d.days; store.set("prog", prog); store.set("days", days); toast("가져왔어요"); render(); } catch { toast("파일을 읽지 못했어요"); } };
   let armed = false;
-  $("#resetBtn").onclick = () => { if (!armed) { armed = true; $("#resetBtn").textContent = "정말 초기화 (한 번 더)"; setTimeout(() => { armed = false; const b = $("#resetBtn"); if (b) b.textContent = "기록 초기화"; }, 4000); return; } prog = {}; days = {}; store.set("prog", prog); store.set("days", days); toast("초기화했어요"); render(); };
+  $("#resetBtn").onclick = () => { if (!armed) { armed = true; $("#resetBtn").textContent = "정말 초기화 (한 번 더 누르기)"; setTimeout(() => { armed = false; const b = $("#resetBtn"); if (b) b.textContent = "기록 초기화"; }, 4000); return; } prog = {}; days = {}; store.set("prog", prog); store.set("days", days); toast("초기화했어요"); render(); };
 }
 
 // ---------- 시작 ----------
-load().then(() => { render(); }).catch(e => { main.innerHTML = `<div class="card">카드 파일을 불러오지 못했어요. 인터넷을 확인하고 다시 열어 주세요.<br><small>${e}</small></div>`; });
+load().then(() => { render(); }).catch(e => { main.innerHTML = `<div class="card" style="margin:20px">카드 파일을 불러오지 못했어요. 인터넷을 확인하고 다시 열어 주세요.<br><small>${esc(e)}</small></div>`; });
+let rw = window.innerWidth >= 900; window.addEventListener("resize", () => { const w = window.innerWidth >= 900; if (w !== rw) { rw = w; renderSide(); } });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 </script>
