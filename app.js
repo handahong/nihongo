@@ -1,5 +1,6 @@
 (() => {
 "use strict";
+const HD = window.HD = window.HD || {};
 const $ = s => document.querySelector(s);
 const main = $("#main");
 const ICO = {
@@ -20,6 +21,7 @@ const S = {
   newPerDay: store.get("newPerDay", 10), speed: store.get("speed", 0.9), showKana: store.get("showKana", true),
   repeatTimes: store.get("repeatTimes", 2), activeDecks: store.get("activeDecks", null), voice: store.get("voice", ""),
   ink: store.get("ink", "ink"), penWidth: store.get("penWidth", 4), fingerDraw: store.get("fingerDraw", false), guideNew: store.get("guideNew", true),
+  showHangul: store.get("showHangul", true),
 };
 let prog = store.get("prog", {});
 let days = store.get("days", {});
@@ -28,6 +30,9 @@ let tab = "home";
 
 // ---------- 데이터 ----------
 const kanaLine = c => (c.kana.replace(/\s/g,"") === c.jp.replace(/\s/g,"") ? "" : c.kana);
+
+const kanaToHangul = (...a) => HD.kanaToHangul(...a);
+const hangulLine = c => S.showHangul ? kanaToHangul(c.kana) : "";
 function hashId(s){ let h = 5381; for (const c of s) h = ((h << 5) + h + c.codePointAt(0)) | 0; return (h >>> 0).toString(36); }
 async function load(){
   const r = await fetch("decks.json?v=" + (window.APP_V || "1"), { cache: "no-cache" });
@@ -46,7 +51,7 @@ async function load(){
 const STEPS = [0, 10*60e3, 1*864e5, 3*864e5, 7*864e5, 14*864e5, 30*864e5, 60*864e5];
 const active = c => S.activeDecks.includes(c.deck);
 function dueCards(){ const now = Date.now(); return CARDS.filter(c => active(c) && prog[c.id] && prog[c.id].due <= now).sort((a,b)=>prog[a.id].due-prog[b.id].due); }
-function newCards(limit){ return CARDS.filter(c => active(c) && !prog[c.id]).slice(0, Math.max(0, limit)); }
+function newCards(limit, kind){ return CARDS.filter(c => active(c) && !prog[c.id] && (!kind || c.kind === kind)).slice(0, Math.max(0, limit)); }
 function todayStat(){ return days[todayKey()] || (days[todayKey()] = { new: 0, review: 0 }); }
 function rate(card, grade){ // 0 모름 1 애매 2 알아
   const p = prog[card.id] || { step: 0, due: 0, seen: 0, lapses: 0 };
@@ -56,7 +61,7 @@ function rate(card, grade){ // 0 모름 1 애매 2 알아
   else if (grade === 1) { p.due = Date.now() + (p.step === 0 ? 10*60e3 : STEPS[p.step] * 0.6); }
   else { p.step = Math.min(STEPS.length - 1, p.step + 1); p.due = Date.now() + STEPS[p.step]; }
   prog[card.id] = p; store.set("prog", prog);
-  const t = todayStat(); if (first) t.new++; else t.review++; store.set("days", days);
+  const t = todayStat(); if (first) { t.new++; if (card.kind === "word") t.newW = (t.newW || 0) + 1; else t.newS = (t.newS || 0) + 1; } else t.review++; store.set("days", days);
 }
 function streak(){
   let n = 0; const d = new Date();
@@ -103,101 +108,15 @@ async function shadow(card, times = S.repeatTimes, onPhase){ // 기기가 말함
 }
 function stopAll(){ loopToken++; speakToken++; TTS && TTS.cancel(); }
 
-// ---------- 쓰기 공간 (애플펜슬) ----------
-// 펜슬 입력만 받고 손바닥·손가락은 무시(설정에서 손가락 허용 가능). 획은 CSS 픽셀 좌표로 저장해 두고 크기가 바뀌면 다시 그림.
-const INKS = [["ink","검정"],["blue","파랑"],["red","빨강"]];
-function makePad({ guide = "", kana = "", showGuide = true, hint = "" } = {}){
-  const root = el(`<div class="pad">
-    <div class="tools"><button data-act="undo">↶ 되돌리기</button><button data-act="clear">지우기</button><span class="hint">${esc(hint)}</span><span class="sp"></span>
-      <button data-act="guide" aria-pressed="${showGuide}">안내선</button>
-      ${INKS.map(([k,l]) => `<button class="dot" data-ink="${k}" aria-pressed="${S.ink === k}" style="--c:var(--${k})" title="${l}">${l}</button>`).join("")}</div>
-    <div class="sheet"><div class="guide jp" ${showGuide ? "" : "hidden"}>${esc(guide)}${kana ? `<small>${esc(kana)}</small>` : ""}</div><canvas></canvas></div></div>`);
-  const sheet = root.querySelector(".sheet"), cv = root.querySelector("canvas"), g = root.querySelector(".guide");
-  const ctx = cv.getContext("2d");
-  let strokes = [], cur = null, W = 0, H = 0, dpr = 1;
-  const color = k => getComputedStyle(document.documentElement).getPropertyValue(`--${k}`).trim() || "#000";
-  function size(){ const r = sheet.getBoundingClientRect(); if (!r.width || !r.height) return; W = r.width; H = r.height; dpr = Math.min(3, window.devicePixelRatio || 1); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); redraw(); }
-  function seg(st, a, b){ ctx.strokeStyle = color(st.ink); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = S.penWidth * (0.55 + Math.min(1, b.p) * 0.9); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
-  function dot(st, a){ ctx.fillStyle = color(st.ink); ctx.beginPath(); ctx.arc(a.x, a.y, S.penWidth * 0.5, 0, Math.PI * 2); ctx.fill(); }
-  function redraw(){ ctx.clearRect(0, 0, W, H); for (const st of strokes) { if (st.pts.length === 1) dot(st, st.pts[0]); for (let i = 1; i < st.pts.length; i++) seg(st, st.pts[i-1], st.pts[i]); } }
-  const t0 = Date.now();
-  const pt = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, p: e.pressure || 0.5, t: Date.now() - t0 }; };
-  const allowed = e => e.pointerType === "pen" || e.pointerType === "mouse" || (e.pointerType === "touch" && S.fingerDraw);
-  cv.addEventListener("pointerdown", e => { if (!allowed(e) || cur) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = { id: e.pointerId, ink: S.ink, pts: [pt(e)] }; dot(cur, cur.pts[0]); });
-  cv.addEventListener("pointermove", e => { if (!cur || e.pointerId !== cur.id) return; e.preventDefault(); const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; for (const ev of evs) { const q = pt(ev); seg(cur, cur.pts[cur.pts.length-1], q); cur.pts.push(q); } });
-  const up = e => { if (!cur || e.pointerId !== cur.id) return; strokes.push(cur); cur = null; };
-  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
-  root.querySelector('[data-act="undo"]').onclick = () => { strokes.pop(); redraw(); };
-  root.querySelector('[data-act="clear"]').onclick = () => { strokes = []; redraw(); };
-  root.querySelector('[data-act="guide"]').onclick = e => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); g.hidden = !on; };
-  root.querySelectorAll(".dot").forEach(b => b.onclick = () => { S.ink = b.dataset.ink; store.set("ink", S.ink); root.querySelectorAll(".dot").forEach(x => x.setAttribute("aria-pressed", x.dataset.ink === S.ink)); });
-  const ro = new ResizeObserver(size); ro.observe(sheet);
-  return {
-    el: root,
-    setGuide(j, k){ g.innerHTML = esc(j) + (k ? `<small>${esc(k)}</small>` : ""); },
-    showGuide(on){ g.hidden = !on; root.querySelector('[data-act="guide"]').setAttribute("aria-pressed", on); },
-    clear(){ strokes = []; redraw(); },
-    isEmpty(){ return strokes.length === 0; },
-    // 구글 손글씨 인식에 보낼 형태: 획마다 [x들, y들, 시각들]
-    ink(){ return { ink: strokes.map(st => [st.pts.map(q => Math.round(q.x)), st.pts.map(q => Math.round(q.y)), st.pts.map(q => q.t)]), w: Math.round(W), h: Math.round(H) }; },
-  };
-}
-
-// ---------- 손글씨 자동 채점 ----------
-// 구글 입력 도구의 손글씨 인식(일본어)에 획 좌표를 보내 글자로 바꾼 뒤 정답과 비교한다. 인터넷이 있어야 함.
-async function recognizeInk({ ink, w, h }){
-  const body = { options: "enable_pre_space", requests: [{ writing_guide: { writing_area_width: w, writing_area_height: h }, ink, language: "ja" }] };
-  const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    const r = await fetch("https://inputtools.google.com/request?itc=ja-t-i0-handwrit&app=translate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ctrl.signal });
-    const j = await r.json();
-    if (j[0] !== "SUCCESS") throw new Error(j[0] || "인식 실패");
-    return j[1][0][1] || [];
-  } finally { clearTimeout(tm); }
-}
-const normJ = s => String(s).replace(/[\s　。、．，！？!?「」『』（）()・…〜～ー]/g, "").replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
-// 두 문자열의 글자 단위 정렬(편집 거리). 인식 결과 글자마다 맞음/틀림 표시를 만들기 위해.
-function align(a, b){
-  const n = a.length, m = b.length; const D = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-  for (let i = 0; i <= n; i++) D[i][0] = i; for (let j = 0; j <= m; j++) D[0][j] = j;
-  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) D[i][j] = Math.min(D[i-1][j] + 1, D[i][j-1] + 1, D[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
-  const out = []; let i = n, j = m; // out: 정답 기준으로 각 글자 상태
-  while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && D[i][j] === D[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1)) { out.unshift({ ch: a[i-1], ok: a[i-1] === b[j-1], got: b[j-1] }); i--; j--; }
-    else if (i > 0 && D[i][j] === D[i-1][j] + 1) { out.unshift({ ch: a[i-1], ok: false, got: "" }); i--; }
-    else { out.unshift({ ch: "", ok: false, got: b[j-1] }); j--; }
-  }
-  return { dist: D[n][m], out };
-}
-// 정답(한자 표기 또는 가나 읽기 둘 다 인정) 대비 가장 가까운 후보를 골라 점수를 낸다.
-function gradeInk(cands, card){
-  const targets = [normJ(card.jp)]; const k = normJ(card.kana); if (k && k !== targets[0]) targets.push(k);
-  let best = null;
-  for (const c of cands.slice(0, 10)) { const nc = normJ(c); for (const t of targets) { const { dist, out } = align(t, nc); const score = t.length ? 1 - dist / Math.max(t.length, nc.length) : 0; if (!best || score > best.score) best = { score, dist, out, got: c, target: t }; } }
-  return best;
-}
-async function gradePad(pad, card, box){
-  if (pad.isEmpty()) { box.innerHTML = `<span class="muted">먼저 펜슬로 써 주세요.</span>`; return null; }
-  box.innerHTML = `<span class="muted">글자를 읽는 중…</span>`;
-  try {
-    const cands = await recognizeInk(pad.ink());
-    if (!cands.length) { box.innerHTML = `<span class="muted">글자를 읽지 못했어요. 조금 더 크게, 한 줄로 써 보세요.</span>`; return null; }
-    const g = gradeInk(cands, card);
-    const chars = g.out.map(o => o.ch ? `<span class="${o.ok ? "ok" : "miss"}">${esc(o.ch)}</span>` : `<span class="extra">${esc(o.got)}</span>`).join("");
-    const perfect = g.dist === 0;
-    box.innerHTML = `<div class="gr ${perfect ? "pass" : g.score >= 0.7 ? "near" : "fail"}"><div class="v">${perfect ? "맞았어요" : g.score >= 0.7 ? `거의 맞았어요 · ${g.dist}글자 다름` : "다시 써 볼까요"}</div><div class="chars jp">${chars}</div><div class="muted">읽힌 글자: <span class="jp">${esc(g.got)}</span>${cands.filter(x => x !== g.got).length ? ` · 다른 후보: ${cands.filter(x => x !== g.got).slice(0, 3).map(esc).join(", ")}` : ""}</div></div>`;
-    return g;
-  } catch (e) {
-    box.innerHTML = `<span class="muted">${e.name === "AbortError" ? "인식 서버가 응답이 없어요." : "인터넷이 있어야 자동 채점이 돼요."} 정답을 보고 직접 고르세요.</span>`;
-    return null;
-  }
-}
+const makePad = (...a) => HD.makePad(...a);
+const gradePad = (...a) => HD.gradePad(...a);
 
 // ---------- 공통 ----------
 let toastTimer;
 function toast(m){ const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200); }
 function el(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+Object.assign(HD, { S, store, el, esc }); // pen.js·kana.js 가 쓰는 공용 도구
 function setTab(t){ stopAll(); if (t !== "study") session = null; tab = t; render(); }
 function speedSeg(onChange){
   const s = el(`<div class="seg">${[[0.75,"천천히"],[0.9,"조금 천천히"],[1,"보통"]].map(([r,l]) => `<button data-r="${r}" aria-pressed="${S.speed === r}">${l}</button>`).join("")}</div>`);
@@ -218,7 +137,7 @@ function deckCounts(d){ const all = CARDS.filter(c => c.deck === d.id); return {
 
 function renderSide(){
   const side = $("#side"); side.innerHTML = "";
-  const todayN = dueCards().length + newCards(S.newPerDay - todayStat().new).length;
+  const todayN = kindStat("word").due + kindStat("word").fresh + kindStat("sentence").due + kindStat("sentence").fresh;
   const cur = (tab === "study" ? "home" : tab);
   const item = (id, color, ico, label, right) => { const b = el(`<button class="srow" aria-current="${cur === id}"><span class="ic" style="background:${color}">${ico}</span><span>${label}</span>${right}</button>`); b.onclick = () => setTab(id); return b; };
   side.append(el(`<h1>일본어</h1>`));
@@ -244,23 +163,29 @@ function renderSide(){
 function render(){ main.innerHTML = ""; renderSide(); ({ home, shadow: shadowTab, write: writeTab, browse, settings, study }[tab])(); main.scrollTop = 0; }
 
 // ---------- 오늘 ----------
+const KINDS = [["word", "단어", "짧게 외우기 · 한 단어씩"], ["sentence", "문장", "통째로 외우기 · 공연장에서 바로 쓰는 말"]];
+function kindStat(kind){ const t = todayStat(); const used = kind === "word" ? (t.newW || 0) : (t.newS || 0); return { due: dueCards().filter(c => c.kind === kind).length, fresh: newCards(S.newPerDay - used, kind).length, used }; }
 function home(){
-  const due = dueCards().length, fresh = newCards(S.newPerDay - todayStat().new).length;
   const t = todayStat(); const learned = Object.keys(prog).length;
   const m = new Date().getMonth() + 1; const plan = DATA.plan.find(p => parseInt(p.month) === m) || DATA.plan[0];
   const d = new Date(); const dateStr = `${d.getMonth()+1}월 ${d.getDate()}일 ${"일월화수목금토"[d.getDay()]}요일`;
   main.append(header("오늘", dateStr));
   const c = el(`<div class="content">
-    <div class="card">
-      <div class="stats"><div><b>${due}</b><span>복습할 카드</span></div><div><b>${fresh}</b><span>새 카드</span></div><div><b>${t.new + t.review}</b><span>오늘 한 카드</span></div></div>
-      <div class="row" style="margin-top:14px"><button class="btn fill" id="startBtn" style="font-size:20px;min-height:60px">${due + fresh > 0 ? "학습 시작" : "오늘 몫 끝 · 10장 더 하기"}</button></div>
-      <div class="muted" style="margin-top:10px">외운 카드 ${learned} / 전체 ${CARDS.filter(active).length} · 연속 ${streak()}일</div>
-    </div>
+    <div class="two" id="kinds"></div>
+    <div class="muted" style="margin:-4px 4px 0">오늘 한 카드 ${t.new + t.review} · 외운 카드 ${learned} / 전체 ${CARDS.filter(active).length} · 연속 ${streak()}일</div>
     <div class="card"><h3>${esc(plan.month)} 목표</h3><div>${esc(plan.goal)}</div></div>
     <div class="only-narrow"><h3 class="sec" style="margin-left:4px">덱 (눌러서 켜고 끄기)</h3><div class="list" id="deckList"></div></div>
   </div>`);
   main.append(c);
-  $("#startBtn").onclick = () => { session = null; tab = "study"; render(); };
+  for (const [kind, name, desc] of KINDS) {
+    const k = kindStat(kind); const total = CARDS.filter(x => active(x) && x.kind === kind).length;
+    const b = el(`<div class="card kind"><h3>${name} 공부</h3><div class="muted">${desc}</div>
+      <div class="stats" style="margin-top:12px"><div><b>${k.due}</b><span>복습</span></div><div><b>${k.fresh}</b><span>새 ${name}</span></div><div><b>${total}</b><span>전체</span></div></div>
+      <button class="btn fill" style="width:100%;margin-top:14px;font-size:20px;min-height:60px" data-k="${kind}">${total === 0 ? "켜진 덱에 " + name + " 없음" : k.due + k.fresh > 0 ? name + " 학습 시작" : "오늘 몫 끝 · 10장 더"}</button></div>`);
+    b.querySelector("button").disabled = total === 0;
+    b.querySelector("button").onclick = () => { session = null; studyKind = kind; tab = "study"; render(); };
+    $("#kinds").append(b);
+  }
   const dl = $("#deckList");
   for (const d of DATA.decks) {
     const on = S.activeDecks.includes(d.id); const { n, done } = deckCounts(d);
@@ -270,31 +195,32 @@ function home(){
 }
 
 // ---------- 학습 ----------
-let session = null;
+let session = null, studyKind = "sentence";
 function study(){
+  const kind = studyKind, kname = kind === "word" ? "단어" : "문장";
   if (!session) {
-    const fresh = newCards(S.newPerDay - todayStat().new);
-    let q = [...dueCards(), ...fresh];
-    if (!q.length) q = newCards(10);
-    if (!q.length) { toast("새 카드가 다 떨어졌어요. 덱을 더 켜 주세요."); tab = "home"; return home(); }
+    const k = kindStat(kind);
+    let q = [...dueCards().filter(c => c.kind === kind), ...newCards(S.newPerDay - k.used, kind)];
+    if (!q.length) q = newCards(10, kind);
+    if (!q.length) { toast(`새 ${kname} 카드가 다 떨어졌어요. 덱을 더 켜 주세요.`); tab = "home"; return home(); }
     session = { q, i: 0, total: q.length, done: 0 };
   }
   const s = session;
   if (s.i >= s.q.length) {
-    main.append(header("오늘", "끝"));
-    main.append(el(`<div class="content"><div class="card done"><div class="big">🎉</div><h2 style="font-size:22px;margin:8px 0">오늘 몫 끝</h2><p class="muted">${s.done}장 공부했어요. 연속 ${streak()}일.</p><div class="row" style="max-width:420px;margin:12px auto 0"><button class="btn fill" id="moreBtn">10장 더</button><button class="btn" id="homeBtn">오늘로</button></div></div></div>`));
-    $("#moreBtn").onclick = () => { session = { q: newCards(10), i: 0, total: 10, done: 0 }; if (!session.q.length) { session = null; toast("새 카드가 다 떨어졌어요. 덱을 더 켜 주세요."); setTab("home"); return; } render(); };
+    main.append(header(kname + " 공부", "끝"));
+    main.append(el(`<div class="content"><div class="card done"><div class="big">🎉</div><h2 style="font-size:22px;margin:8px 0">오늘 ${kname} 몫 끝</h2><p class="muted">${s.done}장 공부했어요. 연속 ${streak()}일.</p><div class="row" style="max-width:420px;margin:12px auto 0"><button class="btn fill" id="moreBtn">10장 더</button><button class="btn" id="homeBtn">오늘로</button></div></div></div>`));
+    $("#moreBtn").onclick = () => { session = { q: newCards(10, kind), i: 0, total: 10, done: 0 }; if (!session.q.length) { session = null; toast(`새 ${kname} 카드가 다 떨어졌어요. 덱을 더 켜 주세요.`); setTab("home"); return; } render(); };
     $("#homeBtn").onclick = () => setTab("home");
     return;
   }
   const c = s.q[s.i]; const isNew = !prog[c.id];
   // 새 카드: 글자와 안내선을 보여 주고 따라 쓰기. 복습: 듣고 받아쓰기(정답은 숨김).
   const trace = isNew && S.guideNew;
-  main.append(header("오늘", `${s.i + 1} / ${s.total} · ${isNew ? "새 카드" : "복습"}`, speedSeg()));
+  main.append(header(kname + " 공부", `${s.i + 1} / ${s.total} · ${isNew ? "새 카드" : "복습"}`, speedSeg()));
   const wrap = el(`<div class="content fill">
     <div class="prog"><i style="width:${(s.i / s.total) * 100}%"></i></div>
     <div class="ans ${trace ? "" : "quiz"}" id="ans">${trace
-      ? `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="ko">${esc(c.ko)}</div><div class="note">${esc(c.note)}</div>`
+      ? `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="hg" ${S.showHangul ? "" : "hidden"}>${esc(hangulLine(c))}</div><div class="ko">${esc(c.ko)}</div><div class="note">${esc(c.note)}</div>`
       : `<span class="q">듣고 아래에 써 보세요</span><span class="w">${esc(c.deckName)} › ${esc(c.scene)}</span>`}</div>
     <div class="row"><button class="btn fill" id="playBtn">${ICO.play} 듣기</button><button class="btn" id="shadowBtn">${ICO.repeat} 따라 말하기 ${S.repeatTimes}회</button><button class="btn" id="gradeBtn" style="color:var(--green)">✓ 채점</button><button class="btn" id="revealBtn" ${trace ? "hidden" : ""}>정답 보기</button></div>
     <div class="phase" id="phase"></div>
@@ -310,7 +236,7 @@ function study(){
   $("#shadowBtn").onclick = () => { stopAll(); shadow(c, S.repeatTimes, phase); };
   const reveal = () => {
     const a = $("#ans"); a.classList.remove("quiz");
-    a.innerHTML = `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="ko">${esc(c.ko)}</div><div class="note">${esc(c.note)}</div>`;
+    a.innerHTML = `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="hg" ${S.showHangul ? "" : "hidden"}>${esc(hangulLine(c))}</div><div class="ko">${esc(c.ko)}</div><div class="note">${esc(c.note)}</div>`;
     pad.showGuide(true); $("#rate").hidden = false; $("#revealBtn").hidden = true;
   };
   $("#revealBtn").onclick = reveal;
@@ -335,7 +261,7 @@ function writeTab(){
   const wrap = el(`<div class="content fill">
     <div class="card" style="padding:14px 18px"><div class="chips" id="deckPick">${DATA.decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deck.id}">${esc(d.name)}</button>`).join("")}</div>
       <div class="chips" id="scenePick" style="margin-top:8px">${scenes.map(x => `<button data-s="${esc(x.name)}" aria-pressed="${x.name === scene.name}">${esc(x.name)}</button>`).join("")}</div></div>
-    <div class="ans quiz" id="ans"><span class="q">${esc(c.ko)}</span><span class="w">${c.note ? esc(c.note) : ""}</span></div>
+    <div class="ans quiz" id="ans"><span class="q">${esc(c.ko)}</span><span class="w">${S.showHangul ? `<span class="hg">${esc(hangulLine(c))}</span> ` : ""}${c.note ? esc(c.note) : ""}</span></div>
     <div id="padSlot" style="display:flex;flex:1;min-height:300px"></div>
     <div class="card" id="grade" hidden></div>
     <div class="row"><button class="btn" id="prevBtn">◀ 이전</button><button class="btn fill" id="playBtn">${ICO.play} 듣기</button><button class="btn" id="gradeBtn" style="color:var(--green)">✓ 채점</button><button class="btn" id="modeBtn">${wr.guide ? "받아쓰기로" : "따라 쓰기로"}</button><button class="btn" id="nextBtn">다음 ▶</button></div>
@@ -366,7 +292,7 @@ function shadowTab(){
   const wrap = el(`<div class="content">
     <div class="card"><h3>덱</h3><div class="chips" id="deckPick">${DATA.decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deck.id}">${esc(d.name)}</button>`).join("")}</div>
       <h3 style="margin-top:14px">장면</h3><div class="chips" id="scenePick">${scenes.map(x => `<button data-s="${esc(x.name)}" aria-pressed="${x.name === scene.name}">${esc(x.name)}</button>`).join("")}</div></div>
-    <div class="qcard open" id="qcard"><div class="where">${sh.i + 1} / ${items.length}</div><div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="ko">${esc(c.ko)}</div></div>
+    <div class="qcard open" id="qcard"><div class="where">${sh.i + 1} / ${items.length}</div><div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="hg" ${S.showHangul ? "" : "hidden"}>${esc(hangulLine(c))}</div><div class="ko">${esc(c.ko)}</div></div>
     <div class="phase" id="phase">${sh.running ? "" : "시작을 누르면 한 문장씩: 듣기 → 따라 말하기 → 다시 듣기 → 다음 문장"}</div>
     <div class="row"><button class="btn" id="prevBtn">◀ 이전</button><button class="btn fill" id="runBtn" style="flex:2;font-size:20px">${sh.running ? "■ 멈춤" : "▶ 시작"}</button><button class="btn" id="nextBtn">다음 ▶</button></div>
   </div>`);
@@ -382,7 +308,7 @@ function shadowTab(){
     const my = ++loopToken;
     for (let k = sh.i; k < items.length; k++) {
       sh.i = k; const card = items[k];
-      const q = $("#qcard"); if (q) { q.querySelector(".where").textContent = `${k + 1} / ${items.length}`; q.querySelector(".main").textContent = card.jp; q.querySelector(".kana").textContent = kanaLine(card); q.querySelector(".ko").textContent = card.ko; }
+      const q = $("#qcard"); if (q) { q.querySelector(".where").textContent = `${k + 1} / ${items.length}`; q.querySelector(".main").textContent = card.jp; q.querySelector(".kana").textContent = kanaLine(card); q.querySelector(".hg").textContent = hangulLine(card); q.querySelector(".ko").textContent = card.ko; }
       const ok = await shadow(card, S.repeatTimes, t => { const p = $("#phase"); if (p) p.textContent = t; });
       if (!ok || my !== loopToken) return;
       await sleep(600); if (my !== loopToken) return;
@@ -407,7 +333,7 @@ function browse(){
   const list = $("#list");
   for (const c of items) {
     const p = prog[c.id];
-    const it = el(`<div class="li"><button class="play">${ICO.play}</button><button class="t"><div class="j jp">${esc(c.jp)}</div><div class="k jp">${esc(kanaLine(c))}</div><div class="m">${esc(c.ko)}${c.note ? " · " + esc(c.note) : ""}</div></button><span class="badge ${p ? (p.step >= 4 ? "ok" : "") : "new"}">${p ? (p.step >= 4 ? "외움" : "학습 중") : "새"}</span></div>`);
+    const it = el(`<div class="li"><button class="play">${ICO.play}</button><button class="t"><div class="j jp">${esc(c.jp)}</div><div class="k jp">${esc(kanaLine(c))}${S.showHangul ? ` <span class="hg">${esc(kanaToHangul(c.kana))}</span>` : ""}</div><div class="m">${esc(c.ko)}${c.note ? " · " + esc(c.note) : ""}</div></button><span class="badge ${p ? (p.step >= 4 ? "ok" : "") : "new"}">${p ? (p.step >= 4 ? "외움" : "학습 중") : "새"}</span></div>`);
     it.querySelector(".play").onclick = () => { stopAll(); speak(c.jp); };
     it.querySelector(".t").onclick = () => { stopAll(); shadow(c, 1); };
     list.append(it);
@@ -424,6 +350,7 @@ function settings(){
     <div class="list">
       <label class="li"><span class="t">하루 새 카드<small>복습은 별도로 다 나와요</small></span><select id="npd">${[5,10,15,20].map(n => `<option value="${n}" ${S.newPerDay === n ? "selected" : ""}>${n}장</option>`).join("")}</select></label>
       <label class="li"><span class="t">따라 말하기 반복<small>듣기 → 말하기를 몇 번 할지</small></span><select id="rep">${[1,2,3].map(n => `<option value="${n}" ${S.repeatTimes === n ? "selected" : ""}>${n}번</option>`).join("")}</select></label>
+      <label class="li"><span class="t">한글 발음 표시<small>예: きょう → 켄오. 익숙해지면 꺼 보세요</small></span><select id="hangul"><option value="1" ${S.showHangul ? "selected" : ""}>보이기</option><option value="0" ${!S.showHangul ? "selected" : ""}>숨기기</option></select></label>
       <label class="li"><span class="t">읽는 법(가나) 표시<small>익숙해지면 꺼 보세요</small></span><select id="kana"><option value="1" ${S.showKana ? "selected" : ""}>보이기</option><option value="0" ${!S.showKana ? "selected" : ""}>숨기기</option></select></label>
       <label class="li"><span class="t">일본어 목소리<small>${voices.length ? voices.length + "개 사용 가능" : "목록을 못 불러왔어요. 소리를 한 번 재생한 뒤 다시 열어 보세요."}</small></span><select id="voice"><option value="">자동(가장 좋은 것)</option>${voices.map(v => `<option value="${esc(v.name)}" ${S.voice === v.name ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
       <button class="li" id="testVoice" style="color:var(--blue)">목소리 들어보기</button>
@@ -450,6 +377,7 @@ function settings(){
   $("#npd").onchange = e => { S.newPerDay = +e.target.value; store.set("newPerDay", S.newPerDay); };
   $("#rep").onchange = e => { S.repeatTimes = +e.target.value; store.set("repeatTimes", S.repeatTimes); };
   $("#kana").onchange = e => { S.showKana = e.target.value === "1"; store.set("showKana", S.showKana); };
+  $("#hangul").onchange = e => { S.showHangul = e.target.value === "1"; store.set("showHangul", S.showHangul); };
   $("#voice").onchange = e => { S.voice = e.target.value; store.set("voice", S.voice); };
   $("#penw").onchange = e => { S.penWidth = +e.target.value; store.set("penWidth", S.penWidth); };
   $("#finger").onchange = e => { S.fingerDraw = e.target.value === "1"; store.set("fingerDraw", S.fingerDraw); };
