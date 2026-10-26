@@ -209,7 +209,7 @@ async function showStrokes(text){
     const box = $("#mBox"); box.innerHTML = `<div class="muted">불러오는 중…</div>`;
     const svg = await strokeSvg(chars[i]);
     if (!svg) { box.innerHTML = `<div class="muted">이 글자의 획순 자료가 없어요 (인터넷 필요)</div>`; return; }
-    box.innerHTML = svg.replace(/<\?xml[^>]*>|<!DOCTYPE[\s\S]*?>|<!--[\s\S]*?-->/g, "");
+    const at = svg.indexOf("<svg"); box.innerHTML = (at >= 0 ? svg.slice(at) : svg).replace(/<!--[\s\S]*?-->/g, ""); // 머리말(DOCTYPE 등)은 버리고 <svg>부터
     const el = box.querySelector("svg"); el.removeAttribute("width"); el.removeAttribute("height"); el.setAttribute("viewBox", el.getAttribute("viewBox") || "0 0 109 109");
     animate(box);
   }
