@@ -85,22 +85,26 @@ function gradeInk(cands, card){
   for (const c of cands.slice(0, 10)) { const nc = normJ(c); for (const t of targets) { const { dist, out } = align(t, nc); const score = t.length ? 1 - dist / Math.max(t.length, nc.length) : 0; if (!best || score > best.score) best = { score, dist, out, got: c, target: t }; } }
   return best;
 }
+// 후보 글자들을 정답과 비교해 결과 칸에 그린다 (손글씨·발음 공통)
+function showGrade(box, cands, card, label){
+  const g = gradeInk(cands, card);
+  const chars = g.out.map(o => o.ch ? `<span class="${o.ok ? "ok" : "miss"}">${esc(o.ch)}</span>` : `<span class="extra">${esc(o.got)}</span>`).join("");
+  const perfect = g.dist === 0;
+  box.innerHTML = `<div class="gr ${perfect ? "pass" : g.score >= 0.7 ? "near" : "fail"}"><div class="v">${perfect ? "맞았어요" : g.score >= 0.7 ? `거의 맞았어요 · ${g.dist}글자 다름` : "다시 해 볼까요"}</div><div class="chars jp">${chars}</div><div class="muted">${label}: <span class="jp">${esc(g.got)}</span>${cands.filter(x => x !== g.got).length ? ` · 다른 후보: ${cands.filter(x => x !== g.got).slice(0, 3).map(esc).join(", ")}` : ""}</div></div>`;
+  return g;
+}
 async function gradePad(pad, card, box){
   if (pad.isEmpty()) { box.innerHTML = `<span class="muted">먼저 펜슬로 써 주세요.</span>`; return null; }
   box.innerHTML = `<span class="muted">글자를 읽는 중…</span>`;
   try {
     const cands = await recognizeInk(pad.ink());
     if (!cands.length) { box.innerHTML = `<span class="muted">글자를 읽지 못했어요. 조금 더 크게, 한 줄로 써 보세요.</span>`; return null; }
-    const g = gradeInk(cands, card);
-    const chars = g.out.map(o => o.ch ? `<span class="${o.ok ? "ok" : "miss"}">${esc(o.ch)}</span>` : `<span class="extra">${esc(o.got)}</span>`).join("");
-    const perfect = g.dist === 0;
-    box.innerHTML = `<div class="gr ${perfect ? "pass" : g.score >= 0.7 ? "near" : "fail"}"><div class="v">${perfect ? "맞았어요" : g.score >= 0.7 ? `거의 맞았어요 · ${g.dist}글자 다름` : "다시 써 볼까요"}</div><div class="chars jp">${chars}</div><div class="muted">읽힌 글자: <span class="jp">${esc(g.got)}</span>${cands.filter(x => x !== g.got).length ? ` · 다른 후보: ${cands.filter(x => x !== g.got).slice(0, 3).map(esc).join(", ")}` : ""}</div></div>`;
-    return g;
+    return showGrade(box, cands, card, "읽힌 글자");
   } catch (e) {
     box.innerHTML = `<span class="muted">${e.name === "AbortError" ? "인식 서버가 응답이 없어요." : "인터넷이 있어야 자동 채점이 돼요."} 정답을 보고 직접 고르세요.</span>`;
     return null;
   }
 }
 
-HD.makePad = makePad; HD.gradePad = gradePad;
+HD.makePad = makePad; HD.gradePad = gradePad; HD.showGrade = showGrade; HD.gradeText = gradeInk;
 })();
