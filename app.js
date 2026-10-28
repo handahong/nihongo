@@ -23,7 +23,7 @@ const S = {
   newPerDay: store.get("newPerDay", 10), speed: store.get("speed", 0.9), showKana: store.get("showKana", true),
   repeatTimes: store.get("repeatTimes", 2), activeDecks: store.get("activeDecks", null), voice: store.get("voice", ""),
   ink: store.get("ink", "ink"), penWidth: store.get("penWidth", 4), fingerDraw: store.get("fingerDraw", false), guideNew: store.get("guideNew", true),
-  showHangul: store.get("showHangul", true), reviewMode: store.get("reviewMode", "alt"), myLine: store.get("myLine", "kana"),
+  showHangul: store.get("showHangul", true), myLine: store.get("myLine", "kana"), traceGrade: store.get("traceGrade", false),
 };
 let prog = store.get("prog", {});
 let days = store.get("days", {});
@@ -67,25 +67,31 @@ async function load(){
   if (!S.activeDecks.length) S.activeDecks = DATA.decks.map(d => d.id);
 }
 
-// ---------- 복습 간격 ----------
-const STEPS = [0, 10*60e3, 1*864e5, 3*864e5, 7*864e5, 14*864e5, 30*864e5, 60*864e5];
+// ---------- 진도·시험 일정 ----------
+// prog[id] = { due, ok, ng, first, last }  (공부 페이지에서 본 카드만 생김. due 가 오늘 이전이면 시험 대상)
+const DAY = 864e5;
 const active = c => S.activeDecks.includes(c.deck);
-function dueCards(){ const now = Date.now(); return CARDS.filter(c => active(c) && prog[c.id] && prog[c.id].due <= now).sort((a,b)=>prog[a.id].due-prog[b.id].due); }
-function newCards(limit, kind){ return CARDS.filter(c => active(c) && !prog[c.id] && (!kind || c.kind === kind)).slice(0, Math.max(0, limit)); }
-function todayStat(){ return days[todayKey()] || (days[todayKey()] = { new: 0, review: 0 }); }
-function rate(card, grade){ // 0 모름 1 애매 2 알아
-  const p = prog[card.id] || { step: 0, due: 0, seen: 0, lapses: 0 };
-  const first = p.seen === 0;
-  p.seen++;
-  if (grade === 0) { p.step = 0; p.lapses++; p.due = Date.now() + 5*60e3; }
-  else if (grade === 1) { p.due = Date.now() + (p.step === 0 ? 10*60e3 : STEPS[p.step] * 0.6); }
-  else { p.step = Math.min(STEPS.length - 1, p.step + 1); p.due = Date.now() + STEPS[p.step]; }
-  prog[card.id] = p; store.set("prog", prog);
-  const t = todayStat(); if (first) { t.new++; if (card.kind === "word") t.newW = (t.newW || 0) + 1; else t.newS = (t.newS || 0) + 1; } else t.review++; store.set("days", days);
+const at4am = d => { const x = new Date(d); x.setHours(4, 0, 0, 0); return x.getTime(); };
+const endOfToday = () => { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); };
+function migrateProg(){ let changed = false; for (const id in prog) { const p = prog[id]; if (p && "step" in p) { prog[id] = { due: p.due || Date.now(), ok: Math.max(0, (p.step || 0) - 1), ng: p.lapses || 0, first: todayKey(), last: todayKey() }; changed = true; } } if (changed) store.set("prog", prog); }
+function learnedCards(kind){ return CARDS.filter(c => active(c) && c.kind === kind && prog[c.id]); }
+function unlearnedCards(kind){ return CARDS.filter(c => active(c) && c.kind === kind && !prog[c.id]); }
+function dueCards(kind){ const lim = endOfToday(); return CARDS.filter(c => active(c) && (!kind || c.kind === kind) && prog[c.id] && prog[c.id].due <= lim).sort((a, b) => prog[a.id].due - prog[b.id].due); }
+function todayStat(){ return days[todayKey()] || (days[todayKey()] = { studied: 0, test: 0, pass: 0 }); }
+function markStudied(card){ // 공부 페이지에서 '다음'을 누르면 외운 것으로 치고, 오늘부터 시험 대상이 된다
+  if (prog[card.id]) return false;
+  prog[card.id] = { due: Date.now(), ok: 0, ng: 0, first: todayKey(), last: todayKey() }; store.set("prog", prog);
+  const t = todayStat(); t.studied++; store.set("days", days); return true;
+}
+function recordTest(card, pass){ // 맞으면 2주 뒤, 틀리면 내일 다시
+  const p = prog[card.id] || { ok: 0, ng: 0, first: todayKey() };
+  if (pass) { p.ok++; p.due = at4am(Date.now() + 14 * DAY); } else { p.ng++; p.due = at4am(Date.now() + DAY); }
+  p.last = todayKey(); prog[card.id] = p; store.set("prog", prog);
+  const t = todayStat(); t.test++; if (pass) t.pass++; store.set("days", days);
 }
 function streak(){
   let n = 0; const d = new Date();
-  for (;;) { const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; const s = days[k]; if (s && (s.new + s.review) > 0) { n++; d.setDate(d.getDate()-1); } else if (n === 0 && k === todayKey()) { d.setDate(d.getDate()-1); } else break; }
+  for (;;) { const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; const s = days[k]; const did = s && ((s.studied || 0) + (s.test || 0) + (s.new || 0) + (s.review || 0)) > 0; if (did) { n++; d.setDate(d.getDate()-1); } else if (n === 0 && k === todayKey()) { d.setDate(d.getDate()-1); } else break; }
   return n;
 }
 
@@ -171,20 +177,6 @@ async function gradeSpeech(card, box, btn){
   finally { if (btn) btn.disabled = false; }
 }
 
-// ---------- 빈칸 채우기 ----------
-// 문장에서 2~4글자 덩어리 하나를 비운다. 같은 카드는 같은 날 같은 자리가 비도록 날짜로 고정.
-function clozeOf(c){
-  const chars = [...c.jp]; const isJ = ch => /[぀-ヿ一-鿿々]/.test(ch);
-  const runs = []; let s = -1;
-  for (let i = 0; i <= chars.length; i++) { if (i < chars.length && isJ(chars[i])) { if (s < 0) s = i; } else if (s >= 0) { runs.push([s, i]); s = -1; } }
-  if (!runs.length) return null;
-  const seed = [...(c.id + todayKey())].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
-  const [rs, re] = runs[seed % runs.length];
-  const maxLen = Math.min(4, re - rs); const len = Math.max(1, Math.min(maxLen, 2 + (seed >>> 3) % 3));
-  const start = rs + ((seed >>> 6) % (re - rs - len + 1));
-  return { pre: chars.slice(0, start).join(""), blank: chars.slice(start, start + len).join(""), post: chars.slice(start + len).join("") };
-}
-
 // ---------- 획순 보기 (KanjiVG) ----------
 const svgCache = new Map();
 async function strokeSvg(ch){
@@ -235,7 +227,12 @@ function toast(m){ const t = $("#toast"); t.textContent = m; t.hidden = false; c
 function el(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 Object.assign(HD, { S, store, el, esc }); // pen.js·kana.js 가 쓰는 공용 도구
-function setTab(t){ stopAll(); closeModal(); if (t !== "study") session = null; tab = t; render(); }
+const KINDS = { word: { name: "단어", desc: "한 단어씩 짧게" }, sentence: { name: "문장", desc: "문법·회화 문장을 통째로" } };
+// 단어/문장 페이지 상태: 공부(study)·시험(test)·목록(list) 중 하나와 현재 위치
+const st = { word: { mode: "study", deck: null, scene: null, i: 0 }, sentence: { mode: "study", deck: null, scene: null, i: 0 } };
+let testSession = { word: null, sentence: null };
+function setTab(t){ stopAll(); closeModal(); tab = t; render(); }
+function openDeck(id){ const d = DATA.decks.find(x => x.id === id); if (!d) return; if (d.kind === "dialog") return setTab("dialog"); st[d.kind] = { mode: "study", deck: id, scene: null, i: 0 }; setTab(d.kind); }
 function speedSeg(onChange){
   const s = el(`<div class="seg">${[[0.75,"천천히"],[0.9,"조금 천천히"],[1,"보통"]].map(([r,l]) => `<button data-r="${r}" aria-pressed="${S.speed === r}">${l}</button>`).join("")}</div>`);
   s.querySelectorAll("button").forEach(b => b.onclick = () => { S.speed = +b.dataset.r; store.set("speed", S.speed); s.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", +x.dataset.r === S.speed)); onChange && onChange(); });
@@ -249,51 +246,54 @@ function header(title, sub, right){
 function toggleDeck(id){
   const i = S.activeDecks.indexOf(id);
   if (i >= 0) { if (S.activeDecks.length === 1) return toast("덱은 하나 이상 켜 두세요"); S.activeDecks.splice(i, 1); } else S.activeDecks.push(id);
-  store.set("activeDecks", S.activeDecks); session = null; render();
+  store.set("activeDecks", S.activeDecks); testSession = { word: null, sentence: null }; render();
 }
 function deckCounts(d){ const all = CARDS.filter(c => c.deck === d.id); return { n: d.kind === "dialog" ? d.scenes.length : all.length, done: all.filter(c => prog[c.id]).length }; }
-const answerHtml = c => `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="hg" ${S.showHangul ? "" : "hidden"}>${esc(hangulLine(c))}</div><div class="ko">${esc(c.ko)}</div>${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}`;
-function pickers(deckSel, sceneSel, scenes, onDeck, onScene, filter){
-  const decks = DATA.decks.filter(filter || (() => true));
-  const w = el(`<div class="card" style="padding:14px 18px"><div class="chips" id="deckPick">${decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deckSel}">${esc(d.name)}</button>`).join("")}</div>
+const cardHtml = (c, open = true) => `<div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="hg" ${S.showHangul ? "" : "hidden"}>${esc(hangulLine(c))}</div><div class="ko">${esc(c.ko)}</div>${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}`;
+function kindDecks(kind){ return DATA.decks.filter(d => d.kind === kind); }
+function pickers(deckSel, sceneSel, scenes, onDeck, onScene, decks){
+  const w = el(`<div class="card" style="padding:14px 18px"><div class="chips" id="deckPick">${decks.map(d => `<button data-d="${d.id}" aria-pressed="${d.id === deckSel}">${esc(d.name)}${S.activeDecks.includes(d.id) ? "" : " (꺼짐)"}</button>`).join("")}</div>
     <div class="chips" id="scenePick" style="margin-top:8px">${scenes.map(x => `<button data-s="${esc(x.name)}" aria-pressed="${x.name === sceneSel}">${esc(x.name)}</button>`).join("")}</div></div>`);
   w.querySelectorAll("#deckPick button").forEach(b => b.onclick = () => { stopAll(); onDeck(b.dataset.d); });
   w.querySelectorAll("#scenePick button").forEach(b => b.onclick = () => { stopAll(); onScene(b.dataset.s); });
   return w;
 }
+function modeSeg(kind){
+  const m = st[kind].mode;
+  const s = el(`<div class="seg">${[["study","공부"],["test","시험"],["list","목록"]].map(([k,l]) => `<button data-m="${k}" aria-pressed="${m === k}">${l}${k === "test" ? ` <b>${dueCards(kind).length}</b>` : ""}</button>`).join("")}</div>`);
+  s.querySelectorAll("button").forEach(b => b.onclick = () => { stopAll(); st[kind].mode = b.dataset.m; render(); });
+  return s;
+}
 
 function renderSide(){
   const side = $("#side"); side.innerHTML = "";
-  const todayN = kindStat("word").due + kindStat("word").fresh + kindStat("sentence").due + kindStat("sentence").fresh;
-  const cur = (tab === "study" ? "home" : tab);
+  const cur = tab;
   const item = (id, color, ico, label, right) => { const b = el(`<button class="srow" aria-current="${cur === id}"><span class="ic" style="background:${color}">${ico}</span><span>${label}</span>${right}</button>`); b.onclick = () => setTab(id); return b; };
   side.append(el(`<h1>일본어</h1>`));
-  side.append(item("home", "var(--blue)", ICO.today, "오늘", `<span class="n">${todayN || ""}</span>`));
-  side.append(item("shadow", "var(--orange)", ICO.shadow, "따라 말하기", ""));
-  side.append(item("write", "var(--green)", ICO.pen, "쓰기 연습", ""));
-  side.append(item("dialog", "var(--red)", ICO.talk, "대화 연습", ""));
-  side.append(item("browse", "var(--purple)", ICO.browse, "둘러보기", ""));
-  side.append(el(`<div class="sec">덱 (눌러서 켜고 끄기)</div>`));
+  const dueAll = dueCards("word").length + dueCards("sentence").length;
+  side.append(item("home", "var(--blue)", ICO.today, "오늘", `<span class="n">${dueAll || ""}</span>`));
+  side.append(item("word", "var(--orange)", ICO.browse, "단어", `<span class="n">${dueCards("word").length || ""}</span>`));
+  side.append(item("sentence", "var(--green)", ICO.pen, "문장", `<span class="n">${dueCards("sentence").length || ""}</span>`));
+  side.append(item("dialog", "var(--red)", ICO.talk, "회화", ""));
+  side.append(el(`<div class="sec">덱 · 이름을 누르면 공부, ✓는 켜고 끄기</div>`));
   for (const d of DATA.decks) {
     if (d.kind === "dialog") continue;
     const on = S.activeDecks.includes(d.id); const { n, done } = deckCounts(d);
-    const b = el(`<button class="srow ${on ? "" : "dim"}"><span>${esc(d.name)}</span><span class="n">${done}/${n}</span><span class="ck">${on ? "✓" : ""}</span></button>`);
-    b.onclick = () => toggleDeck(d.id); side.append(b);
+    const b = el(`<div class="srow deck ${on ? "" : "dim"}" aria-current="${(tab === d.kind && st[d.kind].deck === d.id)}"><button class="nm"><span>${esc(d.name)}</span><span class="n">${done}/${n}</span></button><button class="ck" aria-pressed="${on}" title="${on ? "끄기" : "켜기"}">${on ? "✓" : "○"}</button></div>`);
+    b.querySelector(".nm").onclick = () => openDeck(d.id); b.querySelector(".ck").onclick = () => toggleDeck(d.id); side.append(b);
   }
   side.append(el(`<div class="sec">기록</div>`));
   side.append(el(`<div class="srow"><span>연속</span><span class="n">${streak()}일</span></div>`));
   side.append(el(`<div class="spacer"></div>`));
   side.append(item("settings", "var(--gray)", ICO.settings, "설정", ""));
   const nav = $("#nav"); nav.innerHTML = "";
-  for (const [id, label, ico] of [["home","오늘",ICO.today],["shadow","말하기",ICO.shadow],["write","쓰기",ICO.pen],["dialog","대화",ICO.talk],["browse","둘러보기",ICO.browse],["settings","설정",ICO.settings]]) {
+  for (const [id, label, ico] of [["home","오늘",ICO.today],["word","단어",ICO.browse],["sentence","문장",ICO.pen],["dialog","회화",ICO.talk],["settings","설정",ICO.settings]]) {
     const b = el(`<button aria-selected="${cur === id}">${ico}${label}</button>`); b.onclick = () => setTab(id); nav.append(b);
   }
 }
-function render(){ main.innerHTML = ""; renderSide(); ({ home, shadow: shadowTab, write: writeTab, dialog: dialogTab, browse, settings, study }[tab])(); main.scrollTop = 0; }
+function render(){ main.innerHTML = ""; renderSide(); ({ home, word: () => kindPage("word"), sentence: () => kindPage("sentence"), dialog: dialogTab, settings }[tab])(); main.scrollTop = 0; }
 
 // ---------- 오늘 ----------
-const KINDS = [["word", "단어", "짧게 외우기 · 한 단어씩"], ["sentence", "문장", "통째로 외우기 · 문법과 회화"]];
-function kindStat(kind){ const t = todayStat(); const used = kind === "word" ? (t.newW || 0) : (t.newS || 0); return { due: dueCards().filter(c => c.kind === kind).length, fresh: newCards(S.newPerDay - used, kind).length, used }; }
 function home(){
   const t = todayStat(); const learned = Object.keys(prog).length;
   const m = new Date().getMonth() + 1; const plan = DATA.plan.find(p => parseInt(p.month) === m) || DATA.plan[0];
@@ -301,157 +301,155 @@ function home(){
   main.append(header("오늘", dateStr));
   const c = el(`<div class="content">
     <div class="two" id="kinds"></div>
-    <div class="muted" style="margin:-4px 4px 0">오늘 한 카드 ${t.new + t.review} · 외운 카드 ${learned} / 전체 ${CARDS.filter(active).length} · 연속 ${streak()}일</div>
+    <div class="muted" style="margin:-4px 4px 0">오늘 공부 ${t.studied || 0} · 시험 ${t.test || 0}(맞음 ${t.pass || 0}) · 외우는 중 ${learned}장 · 연속 ${streak()}일</div>
     <div class="card"><h3>${esc(plan.month)} 목표</h3><div>${esc(plan.goal)}</div></div>
-    <div class="only-narrow"><h3 class="sec" style="margin-left:4px">덱 (눌러서 켜고 끄기)</h3><div class="list" id="deckList"></div></div>
+    <div class="card"><h3>이렇게 써요</h3><div class="muted" style="font-size:16px;line-height:1.6">① <b>공부</b>에서 순서대로 보고 듣고 따라 씁니다. '다음'을 누른 카드는 그날부터 시험 대상이 돼요.<br>② <b>시험</b>에서는 뜻만 보고 펜슬로 쓰거나 말합니다. 맞으면 2주 뒤에, 틀리면 내일 다시 나와요.</div></div>
+    <div class="only-narrow"><h3 class="sec" style="margin-left:4px">덱 (이름은 공부, ✓는 켜고 끄기)</h3><div class="list" id="deckList"></div></div>
   </div>`);
   main.append(c);
-  for (const [kind, name, desc] of KINDS) {
-    const k = kindStat(kind); const total = CARDS.filter(x => active(x) && x.kind === kind).length;
-    const b = el(`<div class="card kind"><h3>${name} 공부</h3><div class="muted">${desc}</div>
-      <div class="stats" style="margin-top:12px"><div><b>${k.due}</b><span>복습</span></div><div><b>${k.fresh}</b><span>새 ${name}</span></div><div><b>${total}</b><span>전체</span></div></div>
-      <button class="btn fill" style="width:100%;margin-top:14px;font-size:20px;min-height:60px" data-k="${kind}">${total === 0 ? "켜진 덱에 " + name + " 없음" : k.due + k.fresh > 0 ? name + " 학습 시작" : "오늘 몫 끝 · 10장 더"}</button></div>`);
-    b.querySelector("button").disabled = total === 0;
-    b.querySelector("button").onclick = () => { session = null; studyKind = kind; tab = "study"; render(); };
+  for (const kind of ["word", "sentence"]) {
+    const K = KINDS[kind]; const fresh = unlearnedCards(kind).length, due = dueCards(kind).length, total = CARDS.filter(x => active(x) && x.kind === kind).length;
+    const b = el(`<div class="card kind"><h3>${K.name}</h3><div class="muted">${K.desc}</div>
+      <div class="stats" style="margin-top:12px"><div><b>${due}</b><span>오늘 시험</span></div><div><b>${fresh}</b><span>아직 안 본 ${K.name}</span></div><div><b>${total}</b><span>전체</span></div></div>
+      <div class="row" style="margin-top:14px"><button class="btn fill" data-m="study" style="font-size:19px;min-height:58px">공부하기</button><button class="btn" data-m="test" style="font-size:19px;min-height:58px">시험 보기${due ? ` (${due})` : ""}</button></div></div>`);
+    b.querySelectorAll("button").forEach(x => { x.disabled = total === 0; x.onclick = () => { st[kind].mode = x.dataset.m; if (x.dataset.m === "study") { const first = unlearnedCards(kind)[0]; if (first) { st[kind].deck = first.deck; st[kind].scene = first.scene; st[kind].i = indexInScene(first); } } setTab(kind); }; });
     $("#kinds").append(b);
   }
   const dl = $("#deckList");
   for (const d of DATA.decks) {
     if (d.kind === "dialog") continue;
     const on = S.activeDecks.includes(d.id); const { n, done } = deckCounts(d);
-    const b = el(`<button class="li"><span class="t">${esc(d.name)}<small>${esc(d.desc || "")}</small></span><span class="v">${done}/${n}</span><span class="ck">${on ? "✓" : ""}</span></button>`);
-    b.onclick = () => toggleDeck(d.id); dl.append(b);
+    const b = el(`<div class="li"><button class="t"><span>${esc(d.name)}</span><small>${esc(d.desc || "")}</small></button><span class="v">${done}/${n}</span><button class="ck" style="padding:6px 10px">${on ? "✓" : "○"}</button></div>`);
+    b.querySelector(".t").onclick = () => openDeck(d.id); b.querySelector(".ck").onclick = () => toggleDeck(d.id); dl.append(b);
   }
 }
+function indexInScene(c){ return CARDS.filter(x => x.deck === c.deck && x.scene === c.scene).indexOf(c); }
 
-// ---------- 학습 ----------
-let session = null, studyKind = "sentence";
-function study(){
-  const kind = studyKind, kname = kind === "word" ? "단어" : "문장";
-  if (!session) {
-    const k = kindStat(kind);
-    let q = [...dueCards().filter(c => c.kind === kind), ...newCards(S.newPerDay - k.used, kind)];
-    if (!q.length) q = newCards(10, kind);
-    if (!q.length) { toast(`새 ${kname} 카드가 다 떨어졌어요. 덱을 더 켜 주세요.`); tab = "home"; return home(); }
-    session = { q, i: 0, total: q.length, done: 0 };
-  }
-  const s = session;
-  if (s.i >= s.q.length) {
-    main.append(header(kname + " 공부", "끝"));
-    main.append(el(`<div class="content"><div class="card done"><div class="big">🎉</div><h2 style="font-size:22px;margin:8px 0">오늘 ${kname} 몫 끝</h2><p class="muted">${s.done}장 공부했어요. 연속 ${streak()}일.</p><div class="row" style="max-width:420px;margin:12px auto 0"><button class="btn fill" id="moreBtn">10장 더</button><button class="btn" id="homeBtn">오늘로</button></div></div></div>`));
-    $("#moreBtn").onclick = () => { session = { q: newCards(10, kind), i: 0, total: 10, done: 0 }; if (!session.q.length) { session = null; toast(`새 ${kname} 카드가 다 떨어졌어요. 덱을 더 켜 주세요.`); setTab("home"); return; } render(); };
-    $("#homeBtn").onclick = () => setTab("home");
-    return;
-  }
-  const c = s.q[s.i]; const isNew = !prog[c.id];
-  // 새 카드: 글자와 안내선을 보여 주고 따라 쓰기. 복습: 받아쓰기 또는 빈칸 채우기.
-  const trace = isNew && S.guideNew;
-  const seen = prog[c.id] ? prog[c.id].seen : 0;
-  const cloze = !trace && kind === "sentence" && (S.reviewMode === "cloze" || (S.reviewMode === "alt" && seen % 2 === 1)) ? clozeOf(c) : null;
-  const modeLabel = trace ? "새 카드" : cloze ? "복습 · 빈칸" : "복습 · 받아쓰기";
-  main.append(header(kname + " 공부", `${s.i + 1} / ${s.total} · ${modeLabel}`, speedSeg()));
-  const quizHtml = cloze
-    ? `<span class="q jp cloze">${esc(cloze.pre)}<span class="blank">${"　".repeat(Math.max(2, [...cloze.blank].length))}</span>${esc(cloze.post)}</span><span class="w">빈칸에 들어갈 글자를 써 보세요</span>`
-    : `<span class="q">듣고 아래에 써 보세요</span><span class="w">${esc(c.deckName)} › ${esc(c.scene)}${c.audio ? " · 실제 음성" : ""}</span>`;
+// ---------- 단어 / 문장 페이지 ----------
+function kindPage(kind){
+  const s = st[kind];
+  if (s.mode === "test") return testPage(kind);
+  if (s.mode === "list") return listPage(kind);
+  return studyPage(kind);
+}
+function resolvePos(kind){ // 현재 덱·장면·번호를 유효한 값으로 맞춘다
+  const s = st[kind]; const decks = kindDecks(kind);
+  let deck = decks.find(d => d.id === s.deck) || decks.find(d => S.activeDecks.includes(d.id)) || decks[0];
+  const scene = deck.scenes.find(x => x.name === s.scene) || deck.scenes[0];
+  const items = CARDS.filter(c => c.deck === deck.id && c.scene === scene.name);
+  s.deck = deck.id; s.scene = scene.name; s.i = Math.max(0, Math.min(s.i, items.length - 1));
+  return { deck, scene, items, decks };
+}
+function stepPos(kind, dir){ // 장면 끝이면 다음 장면, 덱 끝이면 다음 덱 (같은 종류 안에서)
+  const s = st[kind]; const { deck, scene, items, decks } = resolvePos(kind);
+  const ni = s.i + dir;
+  if (ni >= 0 && ni < items.length) { s.i = ni; return true; }
+  const si = deck.scenes.indexOf(scene) + dir;
+  if (si >= 0 && si < deck.scenes.length) { s.scene = deck.scenes[si].name; s.i = dir > 0 ? 0 : 1e9; resolvePos(kind); return true; }
+  const di = decks.indexOf(deck) + dir;
+  if (di >= 0 && di < decks.length) { const nd = decks[di]; s.deck = nd.id; s.scene = (dir > 0 ? nd.scenes[0] : nd.scenes[nd.scenes.length - 1]).name; s.i = dir > 0 ? 0 : 1e9; resolvePos(kind); return true; }
+  return false;
+}
+
+// 공부: 커리큘럼 순서대로 한 장씩. 뜻·듣기·따라하기·발음·따라 쓰기·획순이 한 화면에.
+function studyPage(kind){
+  const K = KINDS[kind]; const s = st[kind]; const { deck, scene, items, decks } = resolvePos(kind);
+  const c = items[s.i]; const seen = !!prog[c.id];
+  const t = todayStat();
+  main.append(header(K.name, `${esc(deck.name)} › ${esc(scene.name)} · ${s.i + 1} / ${items.length} · 오늘 ${t.studied || 0} / ${S.newPerDay}장`, modeSeg(kind)));
   const wrap = el(`<div class="content fill">
-    <div class="prog"><i style="width:${(s.i / s.total) * 100}%"></i></div>
-    <div class="ans ${trace ? "" : "quiz"}" id="ans">${trace ? answerHtml(c) : quizHtml}</div>
-    <div class="row"><button class="btn fill" id="playBtn">${ICO.play} 듣기</button><button class="btn" id="shadowBtn">${ICO.repeat} 따라하기</button><button class="btn" id="micBtn">${ICO.mic} 발음</button><button class="btn" id="strokeBtn">획순</button><button class="btn" id="gradeBtn" style="color:var(--green)">✓ 채점</button><button class="btn" id="revealBtn" ${trace ? "hidden" : ""}>정답</button></div>
+    <div class="qcard open" id="qcard" style="min-height:0;padding:26px 30px">${cardHtml(c)}<div class="where" style="margin-top:10px">${seen ? `<span class="badge ok">본 카드 · 시험 ${prog[c.id].ok}승 ${prog[c.id].ng}패</span>` : `<span class="badge new">새 카드</span>`}</div></div>
+    <div class="row"><button class="btn fill" id="playBtn">${ICO.play} 듣기</button><button class="btn" id="shadowBtn">${ICO.repeat} 따라하기</button><button class="btn" id="micBtn">${ICO.mic} 발음</button><button class="btn" id="strokeBtn">획순</button><button class="btn" id="gradeBtn" style="color:var(--green)">✓ 쓴 글자 확인</button></div>
     <div class="phase" id="phase"></div>
-    <div id="padSlot" style="display:flex;flex:1;min-height:300px"></div>
+    <div id="padSlot" style="display:flex;flex:1;min-height:280px"></div>
     <div class="card" id="grade" hidden></div>
-    <div class="rate" id="rate" ${trace ? "" : "hidden"}><button class="no" data-g="0">모름<small>5분 뒤 다시</small></button><button class="mid" data-g="1">애매<small>조금 뒤 다시</small></button><button class="ok" data-g="2">알아<small>${isNew ? "내일" : "더 나중에"}</small></button></div>
+    <div class="row"><button class="btn" id="prevBtn" style="flex:0 0 auto;padding:16px 22px">◀ 이전</button><button class="btn fill" id="nextBtn" style="font-size:20px">${seen ? "다음 ▶" : "외웠어요, 다음 ▶"}</button></div>
   </div>`);
+  wrap.prepend(pickers(deck.id, scene.name, deck.scenes, id => { st[kind] = { mode: "study", deck: id, scene: null, i: 0 }; render(); }, n => { s.scene = n; s.i = 0; render(); }, decks));
   main.append(wrap);
-  const target = cloze ? { ...c, jp: cloze.blank, kana: "" } : c;
-  const pad = makePad({ guide: cloze ? cloze.blank : c.jp, kana: cloze ? "" : (S.showKana ? kanaLine(c) : ""), showGuide: trace, hint: trace ? "연한 글자를 따라 써 보세요" : cloze ? "빈칸 부분만 써 보세요" : "펜슬로 들은 문장을 써 보세요" });
+  const pad = makePad({ guide: c.jp, kana: S.showKana ? kanaLine(c) : "", showGuide: true, hint: "연한 글자를 펜슬로 따라 써 보세요" });
   $("#padSlot").append(pad.el);
-  const phase = t => { const p = $("#phase"); if (p) p.textContent = t; };
+  const phase = x => { const p = $("#phase"); if (p) p.textContent = x; };
   $("#playBtn").onclick = () => { stopAll(); phase("듣기"); say(c).then(() => phase("")); };
   $("#shadowBtn").onclick = () => { stopAll(); shadow(c, S.repeatTimes, phase); };
   $("#strokeBtn").onclick = () => { stopAll(); showStrokes(c.jp); };
-  const reveal = () => { const a = $("#ans"); a.classList.remove("quiz"); a.innerHTML = answerHtml(c); pad.showGuide(true); if (cloze) pad.setGuide(c.jp, S.showKana ? kanaLine(c) : ""); $("#rate").hidden = false; $("#revealBtn").hidden = true; };
-  $("#revealBtn").onclick = reveal;
-  const suggest = g => { if (!g) return; const hint = g.dist === 0 ? "알아" : g.score >= 0.7 ? "애매" : "모름"; const b = $("#rate"); if (b) b.querySelectorAll("button").forEach(x => x.style.outline = x.textContent.startsWith(hint) ? "2px solid var(--blue)" : ""); };
-  $("#gradeBtn").onclick = async () => { const box = $("#grade"); box.hidden = false; box.scrollIntoView({ block: "nearest" }); const g = await gradePad(pad, target, box); if (g) { reveal(); suggest(g); } };
-  $("#micBtn").onclick = async () => { stopAll(); const g = await gradeSpeech(c, $("#grade"), $("#micBtn")); if (g) { reveal(); suggest(g); } };
-  wrap.querySelectorAll("#rate button").forEach(b => b.onclick = () => { stopAll(); rate(c, +b.dataset.g); s.done++; if (+b.dataset.g === 0) { s.q.push(c); s.total++; } s.i++; render(); });
-  if (isNew) setTimeout(() => shadow(c, S.repeatTimes, phase), 250); else setTimeout(() => say(c), 250);
-}
-
-// ---------- 쓰기 연습 ----------
-let wr = { deck: null, scene: null, i: 0, guide: true };
-function writeTab(){
-  const deck = DATA.decks.find(d => d.id === wr.deck && d.kind !== "dialog") || DATA.decks.find(d => d.kind !== "dialog"); wr.deck = deck.id;
-  const scenes = deck.scenes; const scene = scenes.find(x => x.name === wr.scene) || scenes[0]; wr.scene = scene.name;
-  const items = CARDS.filter(c => c.deck === deck.id && c.scene === scene.name);
-  wr.i = Math.min(wr.i, items.length - 1);
-  const c = items[wr.i];
-  main.append(header("쓰기 연습", `${esc(deck.name)} › ${esc(scene.name)} · ${wr.i + 1} / ${items.length}`, speedSeg()));
-  const wrap = el(`<div class="content fill">
-    <div class="ans quiz" id="ans"><span class="q">${esc(c.ko)}</span><span class="w">${S.showHangul ? `<span class="hg">${esc(hangulLine(c))}</span> ` : ""}${c.note ? esc(c.note) : ""}</span></div>
-    <div id="padSlot" style="display:flex;flex:1;min-height:300px"></div>
-    <div class="card" id="grade" hidden></div>
-    <div class="row"><button class="btn" id="prevBtn">◀</button><button class="btn fill" id="playBtn">${ICO.play} 듣기</button><button class="btn" id="strokeBtn">획순</button><button class="btn" id="gradeBtn" style="color:var(--green)">✓ 채점</button><button class="btn" id="modeBtn">${wr.guide ? "받아쓰기로" : "따라 쓰기로"}</button><button class="btn" id="nextBtn">▶</button></div>
-  </div>`);
-  wrap.prepend(pickers(deck.id, scene.name, scenes, id => { wr.deck = id; wr.scene = null; wr.i = 0; render(); }, n => { wr.scene = n; wr.i = 0; render(); }, d => d.kind !== "dialog"));
-  main.append(wrap);
-  const pad = makePad({ guide: c.jp, kana: S.showKana ? kanaLine(c) : "", showGuide: wr.guide, hint: wr.guide ? "연한 글자를 따라 써 보세요" : "듣고 받아써 보세요" });
-  $("#padSlot").append(pad.el);
-  if (!wr.guide) { const a = $("#ans"); a.innerHTML = `<span class="q">듣고 써 보세요</span><span class="sp" style="flex:1"></span><button class="btn" id="showBtn" style="flex:none;min-height:40px;padding:8px 14px;font-size:15px">정답 보기</button>`; $("#showBtn").onclick = () => { a.innerHTML = `<span class="q jp">${esc(c.jp)}</span><span class="w">${esc(c.ko)}</span>`; pad.showGuide(true); }; }
-  $("#prevBtn").onclick = () => { stopAll(); wr.i = (wr.i - 1 + items.length) % items.length; render(); };
-  $("#nextBtn").onclick = () => { stopAll(); wr.i = (wr.i + 1) % items.length; render(); };
-  $("#playBtn").onclick = () => { stopAll(); say(c); };
-  $("#strokeBtn").onclick = () => { stopAll(); showStrokes(c.jp); };
-  $("#modeBtn").onclick = () => { stopAll(); wr.guide = !wr.guide; render(); };
-  $("#gradeBtn").onclick = async () => { const box = $("#grade"); box.hidden = false; const g = await gradePad(pad, c, box); if (g && !wr.guide) { const a = $("#ans"); a.innerHTML = `<span class="q jp">${esc(c.jp)}</span><span class="w">${esc(c.ko)}</span>`; pad.showGuide(true); } };
+  $("#micBtn").onclick = async () => { stopAll(); await gradeSpeech(c, $("#grade"), $("#micBtn")); };
+  $("#gradeBtn").onclick = async () => { const box = $("#grade"); box.hidden = false; await gradePad(pad, c, box); };
+  $("#prevBtn").onclick = () => { stopAll(); if (!stepPos(kind, -1)) toast("맨 처음이에요"); render(); };
+  $("#nextBtn").onclick = () => { stopAll(); const first = markStudied(c); if (first && (todayStat().studied === S.newPerDay)) toast(`오늘 목표 ${S.newPerDay}장을 채웠어요. 시험도 봐 보세요`); if (!stepPos(kind, 1)) { toast(`${K.name} 끝까지 봤어요. 시험 탭에서 확인해 보세요`); } render(); };
   setTimeout(() => say(c), 250);
 }
 
-// ---------- 따라 말하기 ----------
-let sh = { deck: null, scene: null, i: 0, running: false };
-function shadowTab(){
-  const deck = DATA.decks.find(d => d.id === sh.deck && d.kind !== "dialog") || DATA.decks.find(d => d.kind !== "dialog"); sh.deck = deck.id;
-  const scenes = deck.scenes; const scene = scenes.find(x => x.name === sh.scene) || scenes[0]; sh.scene = scene.name;
-  const items = CARDS.filter(c => c.deck === deck.id && c.scene === scene.name);
-  sh.i = Math.min(sh.i, items.length - 1);
-  const c = items[sh.i];
-  main.append(header("따라 말하기", `${esc(deck.name)} › ${esc(scene.name)}`, speedSeg()));
-  const wrap = el(`<div class="content">
-    <div class="qcard open" id="qcard"><div class="where">${sh.i + 1} / ${items.length}</div><div class="main jp">${esc(c.jp)}</div><div class="kana jp" ${S.showKana ? "" : "hidden"}>${esc(kanaLine(c))}</div><div class="hg" ${S.showHangul ? "" : "hidden"}>${esc(hangulLine(c))}</div><div class="ko">${esc(c.ko)}</div></div>
-    <div class="phase" id="phase">${sh.running ? "" : "시작을 누르면 한 문장씩: 듣기 → 따라 말하기 → 다시 듣기 → 다음 문장"}</div>
+// 시험: 뜻만 보고 쓰거나 말한다. 자동 채점 → 맞으면 2주 뒤, 틀리면 내일.
+function testPage(kind){
+  const K = KINDS[kind];
+  let ses = testSession[kind];
+  if (!ses || ses.day !== todayKey()) { const q = dueCards(kind); ses = testSession[kind] = { q, i: 0, ok: 0, ng: 0, day: todayKey() }; }
+  main.append(header(K.name, ses.q.length ? `시험 ${Math.min(ses.i + 1, ses.q.length)} / ${ses.q.length} · 맞음 ${ses.ok} · 틀림 ${ses.ng}` : "시험", modeSeg(kind)));
+  if (!ses.q.length) {
+    const fresh = unlearnedCards(kind).length;
+    const w = el(`<div class="content"><div class="card done"><div class="big">✅</div><h2 style="font-size:22px;margin:8px 0">오늘 시험할 ${K.name}가 없어요</h2><p class="muted">${fresh ? `공부 탭에서 새 ${K.name}를 보고 '다음'을 누르면 바로 시험을 볼 수 있어요. (아직 안 본 ${K.name} ${fresh}장)` : `${K.name}를 전부 봤어요. 틀린 카드는 내일, 맞은 카드는 2주 뒤에 다시 나와요.`}</p><div class="row" style="max-width:420px;margin:12px auto 0"><button class="btn fill" id="goStudy">공부하러 가기</button></div></div></div>`);
+    main.append(w); $("#goStudy").onclick = () => { st[kind].mode = "study"; render(); }; return;
+  }
+  if (ses.i >= ses.q.length) {
+    const w = el(`<div class="content"><div class="card done"><div class="big">🎉</div><h2 style="font-size:22px;margin:8px 0">오늘 ${K.name} 시험 끝</h2><p class="muted">${ses.q.length}장 중 ${ses.ok}장 맞음. 틀린 ${ses.ng}장은 내일 다시 나와요.</p><div class="row" style="max-width:420px;margin:12px auto 0"><button class="btn fill" id="goStudy">새 ${K.name} 공부하기</button><button class="btn" id="goHome">오늘로</button></div></div></div>`);
+    main.append(w); $("#goStudy").onclick = () => { st[kind].mode = "study"; render(); }; $("#goHome").onclick = () => setTab("home"); return;
+  }
+  const c = ses.q[ses.i]; let answered = false;
+  const wrap = el(`<div class="content fill">
+    <div class="prog"><i style="width:${(ses.i / ses.q.length) * 100}%"></i></div>
+    <div class="qcard" id="qcard" style="min-height:0;padding:26px 30px"><div class="where">${esc(c.deckName)} › ${esc(c.scene)}</div><div class="main" style="font-size:clamp(24px,3.4vw,38px)">${esc(c.ko)}</div><div class="muted" style="margin-top:10px">이 뜻의 일본어를 펜슬로 쓰거나, 마이크로 말해 보세요</div></div>
+    <div class="row"><button class="btn fill" id="gradeBtn" style="font-size:20px">✓ 쓴 것 채점</button><button class="btn" id="micBtn">${ICO.mic} 말해서 채점</button><button class="btn" id="dunnoBtn" style="color:var(--red)">모르겠어요</button></div>
+    <div id="padSlot" style="display:flex;flex:1;min-height:280px"></div>
     <div class="card" id="grade" hidden></div>
-    <div class="row"><button class="btn" id="prevBtn">◀ 이전</button><button class="btn fill" id="runBtn" style="flex:2;font-size:20px">${sh.running ? "■ 멈춤" : "▶ 시작"}</button><button class="btn" id="micBtn">${ICO.mic} 발음 확인</button><button class="btn" id="nextBtn">다음 ▶</button></div>
+    <div class="row" id="after" hidden><button class="btn" id="hearBtn">${ICO.play} 정답 듣기</button><button class="btn" id="strokeBtn">획순</button><button class="btn fill" id="nextBtn" style="font-size:20px;flex:2">다음 ▶</button></div>
   </div>`);
-  wrap.prepend(pickers(deck.id, scene.name, scenes, id => { sh = { deck: id, scene: null, i: 0, running: false }; render(); }, n => { sh.scene = n; sh.i = 0; sh.running = false; render(); }, d => d.kind !== "dialog"));
   main.append(wrap);
-  $("#prevBtn").onclick = () => { stopAll(); sh.i = (sh.i - 1 + items.length) % items.length; sh.running = false; render(); };
-  $("#nextBtn").onclick = () => { stopAll(); sh.i = (sh.i + 1) % items.length; sh.running = false; render(); };
-  $("#qcard").onclick = () => { stopAll(); sh.running = false; say(c); };
-  $("#micBtn").onclick = async () => { stopAll(); sh.running = false; await gradeSpeech(items[sh.i], $("#grade"), $("#micBtn")); };
-  $("#runBtn").onclick = async () => {
-    if (sh.running) { stopAll(); sh.running = false; render(); return; }
-    sh.running = true; render();
-    const my = ++loopToken;
-    for (let k = sh.i; k < items.length; k++) {
-      sh.i = k; const card = items[k];
-      const q = $("#qcard"); if (q) { q.querySelector(".where").textContent = `${k + 1} / ${items.length}`; q.querySelector(".main").textContent = card.jp; q.querySelector(".kana").textContent = kanaLine(card); q.querySelector(".hg").textContent = hangulLine(card); q.querySelector(".ko").textContent = card.ko; }
-      const ok = await shadow(card, S.repeatTimes, t => { const p = $("#phase"); if (p) p.textContent = t; });
-      if (!ok || my !== loopToken) return;
-      await sleep(600); if (my !== loopToken) return;
-    }
-    sh.running = false; sh.i = 0; toast("이 장면 끝. 처음부터 다시 할 수 있어요."); render();
-  };
+  const pad = makePad({ guide: c.jp, kana: S.showKana ? kanaLine(c) : "", showGuide: false, hint: "답을 써 보세요" });
+  $("#padSlot").append(pad.el);
+  const guideBtn = pad.el.querySelector('[data-act="guide"]'); guideBtn.hidden = true; // 답이 보이면 안 되니 채점 전엔 안내선 버튼을 숨긴다
+  function finish(pass, note){
+    if (answered) return; answered = true; guideBtn.hidden = false;
+    recordTest(c, pass); if (pass) ses.ok++; else ses.ng++;
+    const q = $("#qcard"); q.classList.add("open"); q.innerHTML = `<div class="where">${pass ? `<span class="badge ok">맞았어요 · 2주 뒤에 다시</span>` : `<span class="badge" style="color:var(--red)">틀렸어요 · 내일 다시</span>`}${note ? ` <span class="muted">${esc(note)}</span>` : ""}</div>${cardHtml(c)}`;
+    pad.showGuide(true);
+    $("#gradeBtn").disabled = $("#micBtn").disabled = $("#dunnoBtn").disabled = true; $("#after").hidden = false;
+    $("#hearBtn").onclick = () => { stopAll(); say(c); }; $("#strokeBtn").onclick = () => { stopAll(); showStrokes(c.jp); };
+    $("#nextBtn").onclick = () => { stopAll(); ses.i++; render(); };
+    $("#nextBtn").scrollIntoView({ block: "nearest" }); say(c);
+  }
+  const passOf = (g, spoken) => !!g && (g.dist === 0 || g.score >= (spoken ? 0.8 : (kind === "sentence" ? 0.9 : 1)));
+  $("#gradeBtn").onclick = async () => { if (answered) return; const box = $("#grade"); box.hidden = false; const g = await gradePad(pad, c, box); if (g) finish(passOf(g, false)); };
+  $("#micBtn").onclick = async () => { if (answered) return; stopAll(); const g = await gradeSpeech(c, $("#grade"), $("#micBtn")); if (g) finish(passOf(g, true)); };
+  $("#dunnoBtn").onclick = () => finish(false);
 }
 
-// ---------- 대화 연습 (상황극) ----------
+// 목록: 덱·장면별로 훑어보기 (듣기 가능)
+function listPage(kind){
+  const K = KINDS[kind]; const s = st[kind]; const { deck, scene, decks } = resolvePos(kind);
+  const items = CARDS.filter(c => c.deck === deck.id && c.scene === scene.name);
+  main.append(header(K.name, `${esc(deck.name)} › ${esc(scene.name)} · ${items.length}장`, modeSeg(kind)));
+  const wrap = el(`<div class="content"><div class="muted" style="margin:-4px 4px 0">재생은 듣기, 글자를 누르면 그 카드부터 공부</div><div class="list" id="list"></div></div>`);
+  wrap.prepend(pickers(deck.id, scene.name, deck.scenes, id => { st[kind] = { mode: "list", deck: id, scene: null, i: 0 }; render(); }, n => { s.scene = n; s.i = 0; render(); }, decks));
+  main.append(wrap);
+  const list = $("#list");
+  items.forEach((c, i) => {
+    const p = prog[c.id]; const due = p && p.due <= endOfToday();
+    const it = el(`<div class="li"><button class="play">${ICO.play}</button><button class="t"><div class="j jp">${esc(c.jp)}</div><div class="k jp">${esc(kanaLine(c))}${S.showHangul ? ` <span class="hg">${esc(kanaToHangul(c.kana))}</span>` : ""}</div><div class="m">${esc(c.ko)}${c.note ? " · " + esc(c.note) : ""}</div></button><span class="badge ${p ? (due ? "" : "ok") : "new"}">${p ? (due ? "시험 대기" : `${p.ok}승 ${p.ng}패`) : "새"}</span></div>`);
+    it.querySelector(".play").onclick = () => { stopAll(); say(c); };
+    it.querySelector(".t").onclick = () => { stopAll(); s.mode = "study"; s.i = i; render(); };
+    list.append(it);
+  });
+}
+
+// ---------- 회화 (상황극) ----------
 let dg = { scene: null, i: 0, running: false, shown: [] };
 function dialogTab(){
   const deck = DATA.decks.find(d => d.kind === "dialog");
-  if (!deck) { main.append(header("대화 연습")); main.append(el(`<div class="content"><div class="card">대화 덱이 없어요.</div></div>`)); return; }
+  if (!deck) { main.append(header("회화")); main.append(el(`<div class="content"><div class="card">대화 덱이 없어요.</div></div>`)); return; }
   const scene = deck.scenes.find(x => x.name === dg.scene) || deck.scenes[0]; dg.scene = scene.name;
   const turns = scene.items.map(([role, jp, kana, ko]) => ({ role, jp, kana, ko }));
-  main.append(header("대화 연습", `${esc(scene.name)} · 상대 말은 앱이, 내 차례엔 내가`, speedSeg()));
+  main.append(header("회화", `${esc(scene.name)} · 상대 말은 앱이, 내 차례엔 내가`, speedSeg()));
   const wrap = el(`<div class="content">
     <div class="card" style="padding:14px 18px"><div class="chips" id="scenePick">${deck.scenes.map(x => `<button data-s="${esc(x.name)}" aria-pressed="${x.name === scene.name}">${esc(x.name)}</button>`).join("")}</div></div>
     <div class="chat" id="chat"></div>
@@ -479,38 +477,17 @@ function dialogTab(){
   $("#startBtn").onclick = () => { stopAll(); chat.innerHTML = ""; dg.running = true; next(0); };
 }
 
-// ---------- 둘러보기 ----------
-let br = { deck: null, scene: null };
-function browse(){
-  const deck = DATA.decks.find(d => d.id === br.deck && d.kind !== "dialog") || DATA.decks.find(d => d.kind !== "dialog"); br.deck = deck.id;
-  const scenes = [{ name: "전체" }, ...deck.scenes]; const scene = scenes.find(x => x.name === br.scene) || scenes[0]; br.scene = scene.name;
-  const items = CARDS.filter(c => c.deck === deck.id && (scene.name === "전체" || c.scene === scene.name));
-  main.append(header("둘러보기", `${items.length}장`));
-  const wrap = el(`<div class="content"><div class="muted" style="margin:-4px 4px 0">재생 버튼은 듣기, 글자를 누르면 따라 말하기 한 번</div><div class="list" id="list"></div></div>`);
-  wrap.prepend(pickers(deck.id, scene.name, scenes, id => { br = { deck: id, scene: null }; render(); }, n => { br.scene = n; render(); }, d => d.kind !== "dialog"));
-  main.append(wrap);
-  const list = $("#list");
-  for (const c of items) {
-    const p = prog[c.id];
-    const it = el(`<div class="li"><button class="play">${ICO.play}</button><button class="t"><div class="j jp">${esc(c.jp)}</div><div class="k jp">${esc(kanaLine(c))}${S.showHangul ? ` <span class="hg">${esc(kanaToHangul(c.kana))}</span>` : ""}</div><div class="m">${esc(c.ko)}${c.note ? " · " + esc(c.note) : ""}</div></button><span class="badge ${p ? (p.step >= 4 ? "ok" : "") : "new"}">${p ? (p.step >= 4 ? "외움" : "학습 중") : "새"}</span></div>`);
-    it.querySelector(".play").onclick = () => { stopAll(); say(c); };
-    it.querySelector(".t").onclick = () => { stopAll(); shadow(c, 1); };
-    list.append(it);
-  }
-}
-
 // ---------- 설정 ----------
 function settings(){
   refreshVoices();
-  const total = Object.values(days).reduce((a, b) => a + b.new + b.review, 0);
+  const total = Object.values(days).reduce((a, b) => a + (b.studied || 0) + (b.test || 0) + (b.new || 0) + (b.review || 0), 0);
   main.append(header("설정"));
   const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${l}</option>`).join("")}</select>`;
   const wrap = el(`<div class="content">
     <div class="sec" style="margin:0 4px -6px">학습</div>
     <div class="list">
-      <label class="li"><span class="t">하루 새 카드<small>단어·문장 각각. 복습은 별도로 다 나와요</small></span>${sel("npd", [[5,"5장"],[10,"10장"],[15,"15장"],[20,"20장"]], S.newPerDay)}</label>
-      <label class="li"><span class="t">복습 방식<small>받아쓰기 = 문장 전체, 빈칸 = 한 군데만</small></span>${sel("rmode", [["alt","번갈아"],["dict","받아쓰기만"],["cloze","빈칸만"]], S.reviewMode)}</label>
-      <label class="li"><span class="t">따라 말하기 반복<small>듣기 → 말하기를 몇 번 할지</small></span>${sel("rep", [[1,"1번"],[2,"2번"],[3,"3번"]], S.repeatTimes)}</label>
+      <label class="li"><span class="t">하루 공부 목표<small>공부 탭에서 '다음'을 누른 새 카드 수. 시험은 목표와 상관없이 밀린 만큼 나와요</small></span>${sel("npd", [[5,"5장"],[10,"10장"],[15,"15장"],[20,"20장"],[30,"30장"]], S.newPerDay)}</label>
+      <label class="li"><span class="t">따라하기 반복<small>듣기 → 말하기를 몇 번 할지</small></span>${sel("rep", [[1,"1번"],[2,"2번"],[3,"3번"]], S.repeatTimes)}</label>
       <label class="li"><span class="t">한글 발음 표시<small>예: きょう → 쿄오. 익숙해지면 꺼 보세요</small></span>${sel("hangul", [["1","보이기"],["0","숨기기"]], S.showHangul ? "1" : "0")}</label>
       <label class="li"><span class="t">읽는 법(가나) 표시<small>익숙해지면 꺼 보세요</small></span>${sel("kana", [["1","보이기"],["0","숨기기"]], S.showKana ? "1" : "0")}</label>
       <label class="li"><span class="t">일본어 목소리<small>${voices.length ? voices.length + "개 사용 가능" : "목록을 못 불러왔어요. 소리를 한 번 재생한 뒤 다시 열어 보세요."}</small></span><select id="voice"><option value="">자동(가장 좋은 것)</option>${voices.map(v => `<option value="${esc(v.name)}" ${S.voice === v.name ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
@@ -520,9 +497,10 @@ function settings(){
     <div class="list">
       <label class="li"><span class="t">펜 굵기</span>${sel("penw", [[3,"가늘게"],[4,"보통"],[6,"굵게"]], S.penWidth)}</label>
       <label class="li"><span class="t">손가락으로도 쓰기<small>끄면 펜슬만 인식해서 손바닥이 닿아도 안 그려져요</small></span>${sel("finger", [["0","펜슬만"],["1","손가락도"]], S.fingerDraw ? "1" : "0")}</label>
-      <label class="li"><span class="t">새 카드는 안내선 따라 쓰기<small>끄면 새 카드도 듣고 받아쓰기</small></span>${sel("gnew", [["1","켬"],["0","끔"]], S.guideNew ? "1" : "0")}</label>
       <div class="li"><span class="t">발음 확인(마이크)<small>${SR ? "이 기기에서 사용할 수 있어요. 처음 누르면 마이크 허용을 물어봐요." : "이 브라우저는 음성 인식을 지원하지 않아요. 사파리로 열어 보세요."}</small></span></div>
     </div>
+    <div class="sec" style="margin:8px 4px -6px">덱 켜고 끄기</div>
+    <div class="list" id="deckList"></div>
     <div class="sec" style="margin:8px 4px -6px">기록</div>
     <div class="card"><div class="stats"><div><b>${streak()}</b><span>연속 일</span></div><div><b>${Object.keys(prog).length}</b><span>본 카드</span></div><div><b>${total}</b><span>누적 학습</span></div></div></div>
     <div class="list">
@@ -536,27 +514,27 @@ function settings(){
     <div class="muted" style="text-align:center;margin-top:8px">버전 ${window.APP_V || "1"} · 획순은 KanjiVG, 손글씨·발음 인식은 인터넷이 있을 때만</div>
   </div>`);
   main.append(wrap);
+  const dl = $("#deckList");
+  for (const d of DATA.decks) { if (d.kind === "dialog") continue; const on = S.activeDecks.includes(d.id); const { n } = deckCounts(d); const b = el(`<button class="li"><span class="t">${esc(d.name)}<small>${esc(d.desc || "")} · ${n}장</small></span><span class="ck">${on ? "✓ 켬" : "꺼짐"}</span></button>`); b.onclick = () => toggleDeck(d.id); dl.append(b); }
   $("#npd").onchange = e => { S.newPerDay = +e.target.value; store.set("newPerDay", S.newPerDay); };
-  $("#rmode").onchange = e => { S.reviewMode = e.target.value; store.set("reviewMode", S.reviewMode); };
   $("#rep").onchange = e => { S.repeatTimes = +e.target.value; store.set("repeatTimes", S.repeatTimes); };
   $("#kana").onchange = e => { S.showKana = e.target.value === "1"; store.set("showKana", S.showKana); };
   $("#hangul").onchange = e => { S.showHangul = e.target.value === "1"; store.set("showHangul", S.showHangul); };
   $("#voice").onchange = e => { S.voice = e.target.value; store.set("voice", S.voice); };
   $("#penw").onchange = e => { S.penWidth = +e.target.value; store.set("penWidth", S.penWidth); };
   $("#finger").onchange = e => { S.fingerDraw = e.target.value === "1"; store.set("fingerDraw", S.fingerDraw); };
-  $("#gnew").onchange = e => { S.guideNew = e.target.value === "1"; store.set("guideNew", S.guideNew); };
   $("#testVoice").onclick = () => speak("今日は来てくれてありがとう。楽しんでますか？");
   $("#exportBtn").onclick = () => {
     const blob = new Blob([JSON.stringify({ prog, days, settings: S }, null, 1)], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `일본어기록_${todayKey()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   };
-  $("#importFile").onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (d.prog) prog = d.prog; if (d.days) days = d.days; store.set("prog", prog); store.set("days", days); toast("가져왔어요"); render(); } catch { toast("파일을 읽지 못했어요"); } };
+  $("#importFile").onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (d.prog) prog = d.prog; if (d.days) days = d.days; store.set("prog", prog); store.set("days", days); migrateProg(); toast("가져왔어요"); render(); } catch { toast("파일을 읽지 못했어요"); } };
   let armed = false;
-  $("#resetBtn").onclick = () => { if (!armed) { armed = true; $("#resetBtn").textContent = "정말 초기화 (한 번 더 누르기)"; setTimeout(() => { armed = false; const b = $("#resetBtn"); if (b) b.textContent = "기록 초기화"; }, 4000); return; } prog = {}; days = {}; store.set("prog", prog); store.set("days", days); toast("초기화했어요"); render(); };
+  $("#resetBtn").onclick = () => { if (!armed) { armed = true; $("#resetBtn").textContent = "정말 초기화 (한 번 더 누르기)"; setTimeout(() => { armed = false; const b = $("#resetBtn"); if (b) b.textContent = "기록 초기화"; }, 4000); return; } prog = {}; days = {}; store.set("prog", prog); store.set("days", days); testSession = { word: null, sentence: null }; toast("초기화했어요"); render(); };
 }
 
 // ---------- 시작 ----------
-load().then(() => { render(); }).catch(e => { main.innerHTML = `<div class="card" style="margin:20px">카드 파일을 불러오지 못했어요. 인터넷을 확인하고 다시 열어 주세요.<br><small>${esc(e)}</small></div>`; });
+load().then(() => { migrateProg(); render(); }).catch(e => { main.innerHTML = `<div class="card" style="margin:20px">카드 파일을 불러오지 못했어요. 인터넷을 확인하고 다시 열어 주세요.<br><small>${esc(e)}</small></div>`; });
 let rw = window.innerWidth >= 900; window.addEventListener("resize", () => { const w = window.innerWidth >= 900; if (w !== rw) { rw = w; renderSide(); } });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
