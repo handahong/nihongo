@@ -158,6 +158,30 @@ main{flex:1;min-width:0;display:flex;flex-direction:column;overflow-y:auto;paddi
 .gr .chars .ok{color:var(--ink)}.gr .chars .miss{color:var(--red);text-decoration:underline;text-decoration-style:wavy;text-underline-offset:4px}.gr .chars .extra{color:var(--orange);opacity:.7}
 #grade{min-height:0}
 
+/* 캘린더 */
+.calwrap{overflow-x:auto}
+.cal{display:grid;grid-template-columns:62px repeat(7,minmax(0,1fr));gap:4px;min-width:560px}
+.cal .wd{font-size:12px;color:var(--sec);text-align:center;padding:2px 0 4px;font-weight:600}
+.cal .wd.lbl{text-align:left;padding-left:4px}
+.cal .wk{display:flex;flex-direction:column;justify-content:center;gap:4px;font-size:12px;color:var(--sec);padding-left:4px}
+.cal .wk b{font-weight:600}
+.cal .wk .badge{padding:2px 7px;font-size:11px;align-self:flex-start}
+.cd{background:var(--card);border-radius:10px;min-height:66px;padding:6px 8px;font-size:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px}
+.cd .d{font-weight:600;font-size:14px}
+.cd .s{color:var(--sec)}.cd .s.none{opacity:.5}
+.cd .due{color:var(--orange);font-weight:600}
+.cd .okmark{position:absolute;right:7px;top:4px;color:var(--green);font-weight:800;font-size:18px}
+.cd{position:relative}
+.cd.today{outline:2px solid var(--blue)}.cd.today .d{color:var(--blue)}
+.cd.other{opacity:.35}
+.list.goals .li.goal .ck{margin-left:0;width:28px;height:28px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--sec);font-size:15px}
+.list.goals .li.goal.ok .ck{background:var(--green);color:#fff}
+.list.goals .li.goal.ok .t{color:var(--sec);text-decoration:line-through}
+.li.plan .t small{line-height:1.5;margin-top:3px}
+.li.plan .t .k{display:inline-block;background:var(--fill);border-radius:6px;padding:0 6px;font-weight:600;color:var(--ink);margin-right:4px}
+.li.plan.now{background:color-mix(in srgb,var(--blue) 7%,var(--card))}
+@media (max-width:899px){ .cal{grid-template-columns:48px repeat(7,minmax(0,1fr));min-width:520px} .cd{min-height:58px;padding:5px 6px;font-size:11px} }
+
 /* ---- 아래 탭 (세로·아이폰) ---- */
 nav{display:none;position:fixed;left:0;right:0;bottom:0;background:var(--side);border-top:1px solid var(--sep);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
 nav button{flex:1;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--sec);font-size:11px}

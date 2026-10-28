@@ -13,6 +13,7 @@ const ICO = {
   repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
   talk: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-1-2V7a2 2 0 0 1 0 0"/><path d="M20 9v6a2 2 0 0 1-2 2"/></svg>',
   mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
 };
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const store = {
@@ -77,17 +78,27 @@ function migrateProg(){ let changed = false; for (const id in prog) { const p = 
 function learnedCards(kind){ return CARDS.filter(c => active(c) && c.kind === kind && prog[c.id]); }
 function unlearnedCards(kind){ return CARDS.filter(c => active(c) && c.kind === kind && !prog[c.id]); }
 function dueCards(kind){ const lim = endOfToday(); return CARDS.filter(c => active(c) && (!kind || c.kind === kind) && prog[c.id] && prog[c.id].due <= lim).sort((a, b) => prog[a.id].due - prog[b.id].due); }
-function todayStat(){ return days[todayKey()] || (days[todayKey()] = { studied: 0, test: 0, pass: 0 }); }
+function todayStat(){ return days[todayKey()] || (days[todayKey()] = { studied: 0, test: 0, pass: 0, w: 0, s: 0, d: 0, done: false }); }
+// 하루 목표: 단어·문장 각 S.newPerDay 장 + 회화 1장면 + 그날 시험 다 치르기. 다 채우면 그날이 ✓
+function goalState(){
+  const t = todayStat(); const g = S.newPerDay;
+  const w = { n: t.w || 0, goal: g, ok: (t.w || 0) >= g || !unlearnedCards("word").length };
+  const se = { n: t.s || 0, goal: g, ok: (t.s || 0) >= g || !unlearnedCards("sentence").length };
+  const d = { n: t.d || 0, goal: 1, ok: (t.d || 0) >= 1 };
+  const left = dueCards().length; const te = { n: left, ok: left === 0 };
+  return { w, s: se, d, test: te, done: w.ok && se.ok && d.ok && te.ok };
+}
+function checkDone(){ const t = todayStat(); const was = !!t.done; t.done = goalState().done; store.set("days", days); if (t.done && !was) toast("오늘 목표 달성! 캘린더에 ✓"); }
 function markStudied(card){ // 공부 페이지에서 '다음'을 누르면 외운 것으로 치고, 오늘부터 시험 대상이 된다
   if (prog[card.id]) return false;
   prog[card.id] = { due: Date.now(), ok: 0, ng: 0, first: todayKey(), last: todayKey() }; store.set("prog", prog);
-  const t = todayStat(); t.studied++; store.set("days", days); return true;
+  const t = todayStat(); t.studied++; if (card.kind === "word") t.w = (t.w || 0) + 1; else t.s = (t.s || 0) + 1; store.set("days", days); checkDone(); return true;
 }
 function recordTest(card, pass){ // 맞으면 2주 뒤, 틀리면 내일 다시
   const p = prog[card.id] || { ok: 0, ng: 0, first: todayKey() };
   if (pass) { p.ok++; p.due = at4am(Date.now() + 14 * DAY); } else { p.ng++; p.due = at4am(Date.now() + DAY); }
   p.last = todayKey(); prog[card.id] = p; store.set("prog", prog);
-  const t = todayStat(); t.test++; if (pass) t.pass++; store.set("days", days);
+  const t = todayStat(); t.test++; if (pass) t.pass++; store.set("days", days); checkDone();
 }
 function streak(){
   let n = 0; const d = new Date();
@@ -275,6 +286,7 @@ function renderSide(){
   side.append(item("word", "var(--orange)", ICO.browse, "단어", `<span class="n">${dueCards("word").length || ""}</span>`));
   side.append(item("sentence", "var(--green)", ICO.pen, "문장", `<span class="n">${dueCards("sentence").length || ""}</span>`));
   side.append(item("dialog", "var(--red)", ICO.talk, "회화", ""));
+  side.append(item("calendar", "var(--purple)", ICO.cal, "캘린더", ""));
   side.append(el(`<div class="sec">덱 · 이름을 누르면 공부, ✓는 켜고 끄기</div>`));
   for (const d of DATA.decks) {
     if (d.kind === "dialog") continue;
@@ -287,11 +299,11 @@ function renderSide(){
   side.append(el(`<div class="spacer"></div>`));
   side.append(item("settings", "var(--gray)", ICO.settings, "설정", ""));
   const nav = $("#nav"); nav.innerHTML = "";
-  for (const [id, label, ico] of [["home","오늘",ICO.today],["word","단어",ICO.browse],["sentence","문장",ICO.pen],["dialog","회화",ICO.talk],["settings","설정",ICO.settings]]) {
+  for (const [id, label, ico] of [["home","오늘",ICO.today],["word","단어",ICO.browse],["sentence","문장",ICO.pen],["dialog","회화",ICO.talk],["calendar","캘린더",ICO.cal],["settings","설정",ICO.settings]]) {
     const b = el(`<button aria-selected="${cur === id}">${ico}${label}</button>`); b.onclick = () => setTab(id); nav.append(b);
   }
 }
-function render(){ main.innerHTML = ""; renderSide(); ({ home, word: () => kindPage("word"), sentence: () => kindPage("sentence"), dialog: dialogTab, settings }[tab])(); main.scrollTop = 0; }
+function render(){ main.innerHTML = ""; renderSide(); ({ home, word: () => kindPage("word"), sentence: () => kindPage("sentence"), dialog: dialogTab, calendar: calendarPage, settings }[tab])(); main.scrollTop = 0; }
 
 // ---------- 오늘 ----------
 function home(){
@@ -303,10 +315,12 @@ function home(){
     <div class="two" id="kinds"></div>
     <div class="muted" style="margin:-4px 4px 0">오늘 공부 ${t.studied || 0} · 시험 ${t.test || 0}(맞음 ${t.pass || 0}) · 외우는 중 ${learned}장 · 연속 ${streak()}일</div>
     <div class="card"><h3>${esc(plan.month)} 목표</h3><div>${esc(plan.goal)}</div></div>
-    <div class="card"><h3>이렇게 써요</h3><div class="muted" style="font-size:16px;line-height:1.6">① <b>공부</b>에서 순서대로 보고 듣고 따라 씁니다. '다음'을 누른 카드는 그날부터 시험 대상이 돼요.<br>② <b>시험</b>에서는 뜻만 보고 펜슬로 쓰거나 말합니다. 맞으면 2주 뒤에, 틀리면 내일 다시 나와요.</div></div>
+    <div class="card" id="goalCard"></div>
+    <div class="card"><h3>이렇게 써요</h3><div class="muted" style="font-size:16px;line-height:1.6">① <b>공부</b>에서 순서대로 보고 듣고 따라 씁니다. '다음'을 누른 카드는 그날부터 시험 대상이 돼요.<br>② <b>시험</b>에서는 뜻만 보고 펜슬로 쓰거나 말합니다. 맞으면 2주 뒤에, 틀리면 내일 다시 나와요.<br>③ 하루 목표 네 가지를 다 채우면 캘린더에 ✓가 찍혀요.</div></div>
     <div class="only-narrow"><h3 class="sec" style="margin-left:4px">덱 (이름은 공부, ✓는 켜고 끄기)</h3><div class="list" id="deckList"></div></div>
   </div>`);
   main.append(c);
+  $("#goalCard").append(goalListEl());
   for (const kind of ["word", "sentence"]) {
     const K = KINDS[kind]; const fresh = unlearnedCards(kind).length, due = dueCards(kind).length, total = CARDS.filter(x => active(x) && x.kind === kind).length;
     const b = el(`<div class="card kind"><h3>${K.name}</h3><div class="muted">${K.desc}</div>
@@ -322,6 +336,17 @@ function home(){
     const b = el(`<div class="li"><button class="t"><span>${esc(d.name)}</span><small>${esc(d.desc || "")}</small></button><span class="v">${done}/${n}</span><button class="ck" style="padding:6px 10px">${on ? "✓" : "○"}</button></div>`);
     b.querySelector(".t").onclick = () => openDeck(d.id); b.querySelector(".ck").onclick = () => toggleDeck(d.id); dl.append(b);
   }
+}
+function goalListEl(){
+  const g = goalState();
+  const row = (ok, label, sub, go) => { const b = el(`<button class="li goal ${ok ? "ok" : ""}"><span class="ck">${ok ? "✓" : "○"}</span><span class="t">${label}<small>${sub}</small></span></button>`); b.onclick = go; return b; };
+  const w = el(`<div><h3>오늘 목표 ${g.done ? '<span class="badge ok">달성 ✓</span>' : ""}</h3><div class="list goals"></div></div>`);
+  const L = w.querySelector(".list");
+  L.append(row(g.w.ok, `단어 ${Math.min(g.w.n, g.w.goal)} / ${g.w.goal}장`, g.w.ok ? "다 했어요" : "공부 탭에서 '다음'을 누른 새 단어", () => { st.word.mode = "study"; setTab("word"); }));
+  L.append(row(g.s.ok, `문장 ${Math.min(g.s.n, g.s.goal)} / ${g.s.goal}장`, g.s.ok ? "다 했어요" : "공부 탭에서 '다음'을 누른 새 문장", () => { st.sentence.mode = "study"; setTab("sentence"); }));
+  L.append(row(g.d.ok, `회화 ${Math.min(g.d.n, 1)} / 1장면`, g.d.ok ? "다 했어요" : "상황극 한 장면을 끝까지", () => setTab("dialog")));
+  L.append(row(g.test.ok, g.test.ok ? "시험 다 봤어요" : `시험 ${g.test.n}장 남음`, g.test.ok ? "오늘 치를 시험이 없어요" : "단어·문장 시험 탭에서", () => { const k = dueCards("word").length ? "word" : "sentence"; st[k].mode = "test"; setTab(k); }));
+  return w;
 }
 function indexInScene(c){ return CARDS.filter(x => x.deck === c.deck && x.scene === c.scene).indexOf(c); }
 
@@ -468,13 +493,94 @@ function dialogTab(){
     return r; };
   async function next(i){
     chat.querySelectorAll(".row.mine").forEach(x => x.remove()); $("#grade").hidden = true;
-    if (i >= turns.length) { chat.append(el(`<div class="muted" style="text-align:center;padding:10px">대화 끝. 처음부터 다시 해 볼까요?</div>`)); dg.running = false; return; }
+    if (i >= turns.length) { chat.append(el(`<div class="muted" style="text-align:center;padding:10px">대화 끝. 처음부터 다시 해 볼까요?</div>`)); dg.running = false; const t = todayStat(); t.d = (t.d || 0) + 1; store.set("days", days); checkDone(); renderSide(); return; }
     dg.i = i; const t = turns[i];
     chat.append(bubble(t, i)); chat.lastElementChild.scrollIntoView({ block: "nearest" });
     if (t.role === "them") { await speak(t.jp); await sleep(400); next(i + 1); }
     else { chat.append(myCtl(t, i)); chat.lastElementChild.scrollIntoView({ block: "nearest" }); }
   }
   $("#startBtn").onclick = () => { stopAll(); chat.innerHTML = ""; dg.running = true; next(0); };
+}
+
+
+// ---------- 캘린더 · 주간 계획 ----------
+const dateKey = d => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; };
+const monday = d => { const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }; // 월요일 시작
+const md = d => `${d.getMonth()+1}/${d.getDate()}`;
+let calMonth = null; // 보고 있는 달 (1일 Date)
+function dueByDay(){ // 날짜별 시험 예정 수. 밀린 건 오늘로 몰아서
+  const m = {}; const today = todayKey();
+  for (const c of CARDS) { const p = prog[c.id]; if (!p || !active(c)) continue; let k = dateKey(p.due); if (k < today) k = today; m[k] = (m[k] || 0) + 1; }
+  return m;
+}
+function weeklyPlan(kind){ // 아직 안 본 카드를 커리큘럼 순서대로 하루 목표×7일씩 주차로 나눈다
+  const per = S.newPerDay * 7; const q = unlearnedCards(kind); const weeks = [];
+  for (let i = 0; i < q.length; i += per) {
+    const chunk = q.slice(i, i + per); const groups = [];
+    for (const c of chunk) { const g = groups[groups.length - 1]; if (g && g.deck === c.deck && g.scene === c.scene) g.n++; else groups.push({ deck: c.deck, deckName: c.deckName, scene: c.scene, n: 1, total: CARDS.filter(x => x.deck === c.deck && x.scene === c.scene).length }); }
+    weeks.push({ cards: chunk, groups });
+  }
+  return weeks;
+}
+function calendarPage(){
+  const today = new Date(); today.setHours(0,0,0,0); const tk = todayKey();
+  if (!calMonth) calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const nav = el(`<div class="seg"><button id="calPrev">◀</button><button id="calToday">오늘</button><button id="calNext">▶</button></div>`);
+  main.append(header("캘린더", `${calMonth.getFullYear()}년 ${calMonth.getMonth()+1}월`, nav));
+  $("#calPrev").onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); render(); };
+  $("#calNext").onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); render(); };
+  $("#calToday").onclick = () => { calMonth = null; render(); };
+  const due = dueByDay(); const thisMon = monday(today);
+  const wordW = weeklyPlan("word"), sentW = weeklyPlan("sentence");
+  const weekIndexOf = d => Math.floor((monday(d) - thisMon) / (7 * DAY)); // 이번 주 = 0
+  // 이번 주 요약
+  let wkStudied = 0, wkTest = 0, wkPass = 0, wkDone = 0; for (let i = 0; i < 7; i++) { const s = days[dateKey(thisMon.getTime() + i * DAY)]; if (s) { wkStudied += s.studied || 0; wkTest += s.test || 0; wkPass += s.pass || 0; if (s.done) wkDone++; } }
+  const wkGoal = S.newPerDay * 7 * 2;
+  const wrap = el(`<div class="content">
+    <div class="card"><h3>이번 주 ${md(thisMon)} ~ ${md(new Date(thisMon.getTime() + 6 * DAY))}</h3>
+      <div class="stats"><div><b>${wkDone} / 7</b><span>목표 달성한 날</span></div><div><b>${wkStudied}</b><span>공부한 카드 / ${wkGoal}</span></div><div><b>${wkTest ? `${wkPass}/${wkTest}` : "0"}</b><span>시험 맞음/전체</span></div></div>
+      <div class="prog" style="margin-top:12px"><i style="width:${Math.min(100, wkStudied / wkGoal * 100)}%"></i></div></div>
+    <div class="card" id="goalCard"></div>
+    <div class="calwrap"><div class="cal" id="cal"></div></div>
+    <div class="muted" style="margin:-4px 4px 0">단=단어, 문=문장, 회=회화 장면, 시=시험 맞음/전체. 하루 목표를 다 채운 날은 ✓. 앞으로 올 날의 "시험 n"은 그날 복습에 나올 카드 수(맞은 건 2주 뒤, 틀린 건 다음 날).</div>
+    <h3 class="sec" style="margin:8px 4px -4px">주간 계획 · 하루 ${S.newPerDay}장씩, 단어·문장 따로</h3>
+    <div class="list" id="plan"></div>
+    <div class="muted" style="margin:-4px 4px 0">계획은 '아직 안 본 카드'를 순서대로 나눈 거라 공부한 만큼 자동으로 당겨져요. 하루 목표는 설정에서 바꿀 수 있어요.</div>
+  </div>`);
+  main.append(wrap);
+  $("#goalCard").append(goalListEl());
+  // 달력: 월요일 시작, 그 달이 들어간 주 전부
+  const cal = $("#cal"); cal.innerHTML = ["주", "월", "화", "수", "목", "금", "토", "일"].map((w, i) => `<div class="wd ${i === 0 ? "lbl" : ""}">${w}</div>`).join("");
+  const first = monday(calMonth); const last = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0);
+  for (let w = new Date(first); w <= last; w.setDate(w.getDate() + 7)) {
+    const wi = weekIndexOf(w);
+    cal.append(el(`<div class="wk"><b>${md(w)}</b>${wi >= 0 && (wi < wordW.length || wi < sentW.length) ? `<span class="badge new">${wi + 1}주차</span>` : ""}</div>`));
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(w.getTime() + i * DAY); const k = dateKey(d); const s = days[k]; const other = d.getMonth() !== calMonth.getMonth();
+      const past = k < tk, isToday = k === tk;
+      let body = "";
+      if (past || isToday) {
+        if (s && s.done) body = `<span class="okmark">✓</span><span class="s">단 ${s.w || 0} · 문 ${s.s || 0}${s.test ? ` · 시 ${s.pass || 0}/${s.test}` : ""}</span>`;
+        else if (s && ((s.studied || 0) + (s.test || 0) + (s.d || 0) + (s.new || 0) + (s.review || 0)) > 0) body = `<span class="s">단 ${s.w || 0}/${S.newPerDay} · 문 ${s.s || 0}/${S.newPerDay}</span><span class="s">회 ${s.d || 0}/1${(s.test || s.review) ? ` · 시 ${s.pass || 0}/${(s.test || 0) + (s.review || 0)}` : ""}</span>${isToday && due[k] ? `<span class="due">시험 ${due[k]} 남음</span>` : ""}`;
+        else if (isToday) body = `<span class="s">단 0/${S.newPerDay} · 문 0/${S.newPerDay}</span>${due[k] ? `<span class="due">시험 ${due[k]} 남음</span>` : ""}`;
+        else body = `<span class="s none">–</span>`;
+      }
+      else if (due[k]) body = `<span class="due">시험 ${due[k]}</span>`;
+      cal.append(el(`<div class="cd ${isToday ? "today" : ""} ${other ? "other" : ""}"><div class="d">${d.getDate()}</div>${body}</div>`));
+    }
+  }
+  // 주간 계획 목록
+  const plan = $("#plan"); const nW = Math.max(wordW.length, sentW.length);
+  if (!nW) plan.append(el(`<div class="li"><span class="t">켜진 덱의 카드를 전부 봤어요. 이제 시험으로 복습만 하면 돼요.</span></div>`));
+  const grp = gs => gs.map(g => `${esc(g.deckName)} › ${esc(g.scene)} <b>${g.n}</b>${g.n < g.total ? `<small style="display:inline">/${g.total}</small>` : ""}`).join(" · ");
+  for (let i = 0; i < Math.min(nW, 12); i++) {
+    const ws = new Date(thisMon.getTime() + i * 7 * DAY), we = new Date(ws.getTime() + 6 * DAY);
+    const w1 = wordW[i], w2 = sentW[i];
+    plan.append(el(`<div class="li plan ${i === 0 ? "now" : ""}"><span class="t"><b>${i + 1}주차 · ${md(ws)}(${"일월화수목금토"[ws.getDay()]}) ~ ${md(we)}(${"일월화수목금토"[we.getDay()]})${i === 0 ? ' <span class="badge new">이번 주</span>' : ""}</b>
+      ${w1 ? `<small><span class="k">단어 ${w1.cards.length}</span> ${grp(w1.groups)}</small>` : `<small><span class="k">단어</span> 전부 봤음 · 시험만</small>`}
+      ${w2 ? `<small><span class="k">문장 ${w2.cards.length}</span> ${grp(w2.groups)}</small>` : `<small><span class="k">문장</span> 전부 봤음 · 시험만</small>`}</span></div>`));
+  }
+  if (nW > 12) plan.append(el(`<div class="li"><span class="t muted">… ${nW - 12}주 더 (총 ${nW}주, 약 ${Math.ceil(nW / 4.3)}개월)</span></div>`));
 }
 
 // ---------- 설정 ----------
@@ -486,7 +592,7 @@ function settings(){
   const wrap = el(`<div class="content">
     <div class="sec" style="margin:0 4px -6px">학습</div>
     <div class="list">
-      <label class="li"><span class="t">하루 공부 목표<small>공부 탭에서 '다음'을 누른 새 카드 수. 시험은 목표와 상관없이 밀린 만큼 나와요</small></span>${sel("npd", [[5,"5장"],[10,"10장"],[15,"15장"],[20,"20장"],[30,"30장"]], S.newPerDay)}</label>
+      <label class="li"><span class="t">하루 공부 목표<small>단어·문장 각각 이만큼 + 회화 1장면 + 시험 다 치르면 그날 ✓. 시험은 밀린 만큼 다 나와요</small></span>${sel("npd", [[5,"5장"],[10,"10장"],[15,"15장"],[20,"20장"],[30,"30장"]], S.newPerDay)}</label>
       <label class="li"><span class="t">따라하기 반복<small>듣기 → 말하기를 몇 번 할지</small></span>${sel("rep", [[1,"1번"],[2,"2번"],[3,"3번"]], S.repeatTimes)}</label>
       <label class="li"><span class="t">한글 발음 표시<small>예: きょう → 쿄오. 익숙해지면 꺼 보세요</small></span>${sel("hangul", [["1","보이기"],["0","숨기기"]], S.showHangul ? "1" : "0")}</label>
       <label class="li"><span class="t">읽는 법(가나) 표시<small>익숙해지면 꺼 보세요</small></span>${sel("kana", [["1","보이기"],["0","숨기기"]], S.showKana ? "1" : "0")}</label>
